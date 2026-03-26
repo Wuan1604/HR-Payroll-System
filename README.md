@@ -63,6 +63,21 @@ Tiếp đến .
 Chạy lệch
 python run.py 
 
+DONE
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+------------------------------
+Da khoi chay server THANH CONG!....
+He thong dang chay tai cong 5000....
+------------------------------
+ * Debugger is active!
+ * Debugger PIN: 923-507-648
+
+
 
 Front end
 chạy cài đặt các thư viện 
@@ -83,3 +98,17 @@ npm install chart.js react-chartjs-2
 Tiếp đến .
 Chạy lệch
 npm run dev
+
+DONE
+PS D:\Visua Studio Code\HR-Payroll-System\frontend> npm run dev
+
+> frontend@0.0.0 dev
+> vite
+
+9:45:50 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+
+  VITE v8.0.2  ready in 1078 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
