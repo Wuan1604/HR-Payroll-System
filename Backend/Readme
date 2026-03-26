@@ -1,0 +1,19 @@
+Hr-Payroll-BE/
+├── app/
+│   ├── __init__.py          # Khởi tạo Flask app và kết nối DB
+│   ├── routes.py            # Nơi viết các hàm API (GET, POST...)
+│   ├── models.py            # Chứa các class định nghĩa bảng dữ liệu
+│   ├── database.py          # Script để thực thi các file .sql của bạn
+│   └── config.py            # Chuyển file config.py vào đây
+├── sql_scripts/             # Gom các file .sql vào một chỗ cho gọn
+│   ├── human.sql
+│   └── payroll.sql
+├── venv/                    # Môi trường ảo (giữ nguyên)
+├── .gitignore               # Chặn push venv và __pycache__ lên GitHub
+├── requirements.txt         # File chứa danh sách thư viện (Flask, PyMySQL...)
+└── run.py                   # File duy nhất để chạy ứng dụng (thay cho app.py)
+
+
+Tài khoản test
+username: admin123
+password: 1
