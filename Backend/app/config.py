@@ -22,14 +22,11 @@ class Config:
         'port': 3306
     }
 
-    # 3. Cấu hình Email (Giữ nguyên App Password bạn đã cấp)
+    # 3. Cấu hình Email 
     SENDER_EMAIL = os.getenv('SENDER_EMAIL', "16.nguyenquan2004@gmail.com")
     SENDER_PASSWORD = os.getenv('SENDER_PASSWORD', "dasw ctzo hzwe oyqg")
 
     # 4. Các cấu hình khác của Flask
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev_key_hr_payroll')
 
-    # 5. Cấu hình đăng nhập admin (hardcoded qua .env)
-    ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', '')
-    # Lưu bcrypt hash dạng chuỗi (ví dụ: $2b$12$....)
-    ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH', '')
+  

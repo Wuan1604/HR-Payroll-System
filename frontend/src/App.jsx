@@ -9,7 +9,6 @@ import TimekeepingPage from './pages/TimekeepingPage'
 import UpdateSalaryPage from './pages/UpdateSalaryPage'
 import SendSalaryEmailsPage from './pages/SendSalaryEmailsPage'
 import NotImplementedPage from './pages/NotImplementedPage'
-import LoginPage from './pages/LoginPage'
 import RequireAuth from './components/RequireAuth'
 
 function App() {
@@ -80,7 +79,6 @@ function App() {
 
         <main className="content">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
             <Route
               path="/"
               element={
