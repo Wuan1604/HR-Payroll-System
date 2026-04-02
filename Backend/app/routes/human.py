@@ -168,13 +168,31 @@ def report_human():
     if not conn: return jsonify({"error": "DB Error"}), 500
     cursor = conn.cursor()
     try:
+        # 1. Tổng số nhân viên
         cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Employees]")
-        total = cursor.fetchone()[0]
-        return jsonify({"total_employees": total}), 200
+        total_employees = cursor.fetchone()[0]
+
+        # 2. Tổng số phòng ban
+        cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Departments]")
+        total_depts = cursor.fetchone()[0]
+
+        # 3. Tổng số chức vụ
+        cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Positions]")
+        total_positions = cursor.fetchone()[0]
+
+        # 4. Thống kê theo trạng thái (Status)
+        cursor.execute("SELECT Status, COUNT(*) FROM [HUMAN_2025].[dbo].[Employees] GROUP BY Status")
+        status_counts = {row[0]: row[1] for row in cursor.fetchall()}
+
+        return jsonify({
+            "total_employees": total_employees,
+            "total_departments": total_depts,
+            "total_positions": total_positions,
+            "status_distribution": status_counts
+        }), 200
     finally:
         cursor.close()
         conn.close()
-       
 # ---------------------------------------------------------
 # 6.QUẢN LÝ PHÒNG BAN (DEPARTMENTS) - CRUD & SYNC
 # ---------------------------------------------------------
