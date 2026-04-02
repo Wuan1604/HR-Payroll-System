@@ -10,6 +10,8 @@ import UpdateSalaryPage from './pages/UpdateSalaryPage'
 import SendSalaryEmailsPage from './pages/SendSalaryEmailsPage'
 import NotImplementedPage from './pages/NotImplementedPage'
 import RequireAuth from './components/RequireAuth'
+import DepartmentPage from './pages/DepartmentPage'
+import PositionPage from './pages/PositionPage' // Import trang Chức vụ mới
 
 function App() {
   const linkClassName = ({ isActive }) =>
@@ -32,10 +34,10 @@ function App() {
               Thêm nhân viên
             </NavLink>
             <NavLink to="/show-department" className={linkClassName}>
-              Phòng ban (chưa có)
+              Phòng ban 
             </NavLink>
             <NavLink to="/show-human" className={linkClassName}>
-              Chức vụ (chưa có)
+              Chức vụ
             </NavLink>
 
             <div className="sidebar__section">Quản lý Tiền lương</div>
@@ -137,22 +139,26 @@ function App() {
               }
             />
 
+            {/* Cập nhật route Phòng ban: Thay NotImplemented bằng DepartmentPage */}
             <Route
               path="/show-department"
               element={
                 <RequireAuth>
-                  <NotImplementedPage apiPath="/api/human/show-department" />
+                  <DepartmentPage />
                 </RequireAuth>
               }
             />
+
+            {/* Cập nhật route Chức vụ: Thay NotImplemented bằng PositionPage */}
             <Route
               path="/show-human"
               element={
                 <RequireAuth>
-                  <NotImplementedPage apiPath="/api/human/show-human" />
+                  <PositionPage />
                 </RequireAuth>
               }
             />
+
             <Route
               path="/history-salaries"
               element={

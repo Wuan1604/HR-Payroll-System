@@ -174,3 +174,119 @@ def report_human():
     finally:
         cursor.close()
         conn.close()
+       
+# ---------------------------------------------------------
+# 6.QUẢN LÝ PHÒNG BAN (DEPARTMENTS) - CRUD & SYNC
+# ---------------------------------------------------------
+
+@human_bp.route('/show-department', methods=['GET'])
+@login_required
+def show_departments():
+    conn = get_sqlserver_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DepartmentID, DepartmentName FROM [HUMAN_2025].[dbo].[Departments]")
+    data = [{"DepartmentID": r[0], "DepartmentName": r[1]} for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(data), 200
+
+@human_bp.route('/add-department', methods=['POST'])
+@login_required
+def add_department():
+    name = request.json.get('DepartmentName')
+    sql_conn = get_sqlserver_connection()
+    my_conn = get_mysql_connection()
+    sql_cursor = sql_conn.cursor()
+    my_cursor = my_conn.cursor()
+    try:
+        # 1. Thêm vào SQL Server
+        sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName) VALUES (?)", (name))
+        sql_cursor.execute("SELECT @@IDENTITY")
+        new_id = int(sql_cursor.fetchone()[0])
+        sql_conn.commit()
+
+        # 2. Đồng bộ sang MySQL (Bảng departments_payroll)
+        my_cursor.execute("INSERT INTO departments_payroll (DepartmentID, DepartmentName) VALUES (%s, %s)", (new_id, name))
+        my_conn.commit()
+        return jsonify({"message": "Thêm thành công", "id": new_id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        sql_conn.close()
+        my_conn.close()
+
+@human_bp.route('/update-department', methods=['PUT'])
+@login_required
+def update_department():
+    data = request.json # {DepartmentID, DepartmentName}
+    sql_conn = get_sqlserver_connection()
+    my_conn = get_mysql_connection()
+    try:
+        # Update SQL Server
+        sql_conn.cursor().execute("UPDATE [HUMAN_2025].[dbo].[Departments] SET DepartmentName = ? WHERE DepartmentID = ?", 
+                                   (data['DepartmentName'], data['DepartmentID']))
+        sql_conn.commit()
+        # Update MySQL
+        my_conn.cursor().execute("UPDATE departments_payroll SET DepartmentName = %s WHERE DepartmentID = %s", 
+                                  (data['DepartmentName'], data['DepartmentID']))
+        my_conn.commit()
+        return jsonify({"message": "Cập nhật thành công"}), 200
+    finally:
+        sql_conn.close()
+        my_conn.close()
+
+@human_bp.route('/delete-department/<int:id>', methods=['DELETE'])
+@login_required
+def delete_department(id):
+    sql_conn = get_sqlserver_connection()
+    my_conn = get_mysql_connection()
+    sql_cursor = sql_conn.cursor()
+    try:
+        # Kiểm tra ràng buộc nhân viên trước khi xóa
+        sql_cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Employees] WHERE DepartmentID = ?", (id))
+        if sql_cursor.fetchone()[0] > 0:
+            return jsonify({"error": "Không thể xóa phòng ban đang có nhân viên"}), 400
+        
+        sql_cursor.execute("DELETE FROM [HUMAN_2025].[dbo].[Departments] WHERE DepartmentID = ?", (id))
+        sql_conn.commit()
+        # Xóa bên MySQL
+        my_conn.cursor().execute("DELETE FROM departments_payroll WHERE DepartmentID = %s", (id))
+        my_conn.commit()
+        return jsonify({"message": "Xóa thành công"}), 200
+    finally:
+        sql_conn.close()
+        my_conn.close()
+
+# ---------------------------------------------------------
+# 7.QUẢN LÝ CHỨC VỤ (POSITIONS) - CRUD & SYNC
+# ---------------------------------------------------------
+
+@human_bp.route('/show-human', methods=['GET'])
+@login_required
+def show_positions():
+    conn = get_sqlserver_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT PositionID, PositionName FROM [HUMAN_2025].[dbo].[Positions]")
+    data = [{"PositionID": r[0], "PositionName": r[1]} for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(data), 200
+
+@human_bp.route('/add-position', methods=['POST'])
+@login_required
+def add_position():
+    name = request.json.get('PositionName')
+    sql_conn = get_sqlserver_connection()
+    my_conn = get_mysql_connection()
+    sql_cursor = sql_conn.cursor()
+    try:
+        # SQL Server
+        sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Positions] (PositionName) VALUES (?)", (name))
+        sql_cursor.execute("SELECT @@IDENTITY")
+        new_id = int(sql_cursor.fetchone()[0])
+        sql_conn.commit()
+        # MySQL
+        my_conn.cursor().execute("INSERT INTO positions_payroll (PositionID, PositionName) VALUES (%s, %s)", (new_id, name))
+        my_conn.commit()
+        return jsonify({"message": "Thêm chức vụ thành công"}), 201
+    finally:
+        sql_conn.close()
+        my_conn.close()
