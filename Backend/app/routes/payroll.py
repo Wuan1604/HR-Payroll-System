@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from app.database import get_mysql_connection, get_sqlserver_connection
+# Thống nhất tên hàm kết nối từ database.py của bạn
+from app.database import get_mysql_connection, get_sqlserver_connection 
 from ..config import Config
 from app.auth import login_required
 from datetime import datetime
@@ -9,9 +10,6 @@ from email.mime.multipart import MIMEMultipart
 
 payroll_bp = Blueprint('payroll', __name__)
 
-# ---------------------------
-# HÀM LOGIC GỬI EMAIL (Dùng Config)
-# ---------------------------
 def send_email_logic(to_email, subject, content):
     try:
         msg = MIMEMultipart()
@@ -31,68 +29,94 @@ def send_email_logic(to_email, subject, content):
         return False
 
 # ---------------------------
-# 1. HIỂN THỊ BẢNG LƯƠNG (MySQL)
+# 1. HIỂN THỊ BẢNG LƯƠNG
 # ---------------------------
 @payroll_bp.route('/show-salaries', methods=['GET'])
 @login_required
 def show_salaries():
-    conn = get_mysql_connection()
-    if not conn: return jsonify({"error": "Không thể kết nối MySQL"}), 500
+    mysql_conn = get_mysql_connection()
+    mssql_conn = get_sqlserver_connection() # Sửa tên hàm cho đúng import
     
-    cursor = conn.cursor(dictionary=True)
+    if not mysql_conn or not mssql_conn:
+        return jsonify({"error": "Lỗi kết nối cơ sở dữ liệu"}), 500
+
     try:
-        # Join bảng salaries và employees trong MySQL để lấy tên
-        cursor.execute("""
-            SELECT s.*, e.FullName 
-            FROM salaries s 
-            JOIN employees e ON s.EmployeeID = e.EmployeeID
-            ORDER BY s.SalaryMonth DESC
-        """)
-        return jsonify(cursor.fetchall()), 200
+        mysql_cursor = mysql_conn.cursor(dictionary=True)
+        mssql_cursor = mssql_conn.cursor()
+
+        # Lấy lương từ MySQL
+        mysql_cursor.execute("SELECT * FROM salaries ORDER BY SalaryMonth DESC")
+        salaries = mysql_cursor.fetchall()
+
+        # Lấy nhân viên từ SQL Server
+        mssql_cursor.execute("SELECT EmployeeID, FullName, DepartmentID FROM Employees")
+        employees = {row[0]: {"FullName": row[1], "Dept": row[2]} for row in mssql_cursor.fetchall()}
+
+        for s in salaries:
+            emp = employees.get(s['EmployeeID'])
+            s['FullName'] = emp['FullName'] if emp else "N/A"
+            # ÉP KIỂU ĐỂ TRÁNH LỖI JSON 500
+            s['BaseSalary'] = float(s['BaseSalary'])
+            s['Bonus'] = float(s['Bonus'])
+            s['Deductions'] = float(s['Deductions'])
+            s['NetSalary'] = float(s['NetSalary'])
+            s['SalaryMonth'] = str(s['SalaryMonth']) 
+
+        return jsonify(salaries), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        mysql_conn.close()
+        mssql_conn.close()
+
 # ---------------------------
-# 4. HIỂN THỊ CHẤM CÔNG (MySQL)
+# 2. HIỂN THỊ CHẤM CÔNG (Sửa logic lấy tên từ SQL Server)
 # ---------------------------
 @payroll_bp.route('/timekeeping', methods=['GET'])
 @login_required
 def get_timekeeping():
-    conn = get_mysql_connection()
-    if not conn: return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+    my_conn = get_mysql_connection()
+    sql_conn = get_sqlserver_connection()
     
-    cursor = conn.cursor(dictionary=True)
+    if not my_conn or not sql_conn: 
+        return jsonify({"error": "Lỗi kết nối DB"}), 500
+    
     try:
-        # Lấy dữ liệu từ bảng attendance
-        cursor.execute("""
-            SELECT a.*, e.FullName 
-            FROM attendance a
-            JOIN employees e ON a.EmployeeID = e.EmployeeID
-            ORDER BY a.AttendanceMonth DESC
-        """)
-        return jsonify(cursor.fetchall()), 200
+        my_cursor = my_conn.cursor(dictionary=True)
+        my_cursor.execute("SELECT * FROM attendance ORDER BY AttendanceMonth DESC")
+        attendances = my_cursor.fetchall()
+
+        sql_cursor = sql_conn.cursor()
+        sql_cursor.execute("SELECT EmployeeID, FullName FROM Employees")
+        emps = {row[0]: row[1] for row in sql_cursor.fetchall()}
+
+        for a in attendances:
+            a['FullName'] = emps.get(a['EmployeeID'], "N/A")
+            a['AttendanceMonth'] = str(a['AttendanceMonth'])
+
+        return jsonify(attendances), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        my_conn.close()
+        sql_conn.close()
+
 # ---------------------------
-# 2. CẬP NHẬT LƯƠNG (MySQL)
+# 3. CẬP NHẬT LƯƠNG
 # ---------------------------
 @payroll_bp.route('/update-salary', methods=['POST'])
 @login_required
 def update_salary():
     data = request.json
+    conn = get_mysql_connection()
+    if not conn: return jsonify({"error": "Lỗi kết nối"}), 500
+    
     try:
-        # Tính toán lại NetSalary để đảm bảo chính xác
         base = float(data.get('BaseSalary', 0))
         bonus = float(data.get('Bonus', 0))
         deduct = float(data.get('Deductions', 0))
         net_salary = base + bonus - deduct
         
-        conn = get_mysql_connection()
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE salaries 
@@ -100,18 +124,14 @@ def update_salary():
             WHERE SalaryID=%s
         """, (base, bonus, deduct, net_salary, data['SalaryID']))
         conn.commit()
-        
-        return jsonify({
-            "message": "Cập nhật lương thành công",
-            "NetSalary": net_salary
-        }), 200
+        return jsonify({"message": "Thành công", "NetSalary": net_salary}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        if 'conn' in locals(): conn.close()
+        conn.close()
 
 # ---------------------------
-# 3. GỬI EMAIL PHIẾU LƯƠNG (KẾT HỢP SQL Server + MySQL)
+# 4. GỬI EMAIL PHIẾU LƯƠNG
 # ---------------------------
 @payroll_bp.route('/send-salary-emails', methods=['GET'])
 @login_required
@@ -119,44 +139,26 @@ def send_emails():
     my_conn = get_mysql_connection()
     sql_conn = get_sqlserver_connection()
     
-    if not my_conn or not sql_conn:
-        return jsonify({"error": "Lỗi kết nối một trong hai Database"}), 500
-    
     try:
-        # Bước A: Lấy dữ liệu lương từ MySQL
         my_cursor = my_conn.cursor(dictionary=True)
-        my_cursor.execute("SELECT EmployeeID, NetSalary, SalaryMonth FROM salaries")
+        my_cursor.execute("SELECT EmployeeID, NetSalary FROM salaries")
         salaries = my_cursor.fetchall()
         
-        # Bước B: Lấy Email nhân viên từ SQL Server [HUMAN_2025]
         sql_cursor = sql_conn.cursor()
-        sql_cursor.execute("SELECT EmployeeID, FullName, Email FROM [HUMAN_2025].[dbo].[Employees]")
+        sql_cursor.execute("SELECT EmployeeID, FullName, Email FROM Employees")
         emps = {r[0]: {"name": r[1], "email": r[2]} for r in sql_cursor.fetchall()}
         
         sent_count = 0
         for s in salaries:
             emp = emps.get(s['EmployeeID'])
-            # Kiểm tra nếu nhân viên có email và NetSalary > 0
-            if emp and emp['email'] and s['NetSalary'] > 0:
-                # Format tiền: 10,000,000 VND
-                formatted_salary = "{:,.0f}".format(s['NetSalary'])
+            if emp and emp['email'] and float(s['NetSalary']) > 0:
+                formatted_salary = "{:,.0f}".format(float(s['NetSalary']))
+                html = f"<h3>Chào {emp['name']}, lương tháng này của bạn là {formatted_salary} VND</h3>"
                 
-                html_content = f"""
-                <div style="font-family: Arial; border: 1px solid #ddd; padding: 20px;">
-                    <h2 style="color: #2c3e50;">PHIẾU LƯƠNG NHÂN VIÊN</h2>
-                    <p>Xin chào: <b>{emp['name']}</b></p>
-                    <p>Mã nhân viên: <b>{s['EmployeeID']}</b></p>
-                    <hr>
-                    <p style="font-size: 16px;">Tổng lương thực nhận tháng này:</p>
-                    <h1 style="color: #e74c3c;">{formatted_salary} VND</h1>
-                    <p><i>Vui lòng phản hồi nếu có sai sót.</i></p>
-                </div>
-                """
-                if send_email_logic(emp['email'], f"Thông báo lương - {datetime.now().strftime('%m/%Y')}", html_content):
+                if send_email_logic(emp['email'], "Phiếu lương", html):
                     sent_count += 1
                     
-        return jsonify({"message": f"Đã gửi thành công {sent_count} email phiếu lương"}), 200
-    
+        return jsonify({"message": f"Đã gửi {sent_count} email"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
