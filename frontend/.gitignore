@@ -1,27 +1,24 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Chặn file môi trường quan trọng (Không bao giờ up cái này)
+.env
+.env.local
+.env.*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Chặn thư mục môi trường ảo Python
+venv/
+env/
+ENV/
+.venv/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Chặn thư mục thư viện Node.js (vì bạn có frontend)
+node_modules/
 
+# Chặn các file rác của Python
 **/__pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Chặn các file rác của hệ thống và IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
