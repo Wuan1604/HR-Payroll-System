@@ -1,21 +1,23 @@
-# Thư mục môi trường ảo (Virtual Environments)
+# Chặn file môi trường quan trọng (Không bao giờ up cái này)
+.env
+.env.local
+.env.*
+
+# Chặn thư mục môi trường ảo Python
 venv/
 env/
 ENV/
-.env
 .venv/
 
-# File biên dịch của Python (Python bytecode)
-__pycache__/
+# Chặn thư mục thư viện Node.js (vì bạn có frontend)
+node_modules/
+
+# Chặn các file rác của Python
+**/__pycache__/
 *.py[cod]
 *$py.class
 
-# Thư mục phân phối / gói
-dist/
-build/
-*.egg-info/
-
-# File cấu hình cá nhân hoặc hệ điều hành
+# Chặn các file rác của hệ thống và IDE
 .DS_Store
 Thumbs.db
 .vscode/
