@@ -1,15 +1,22 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Thư mục môi trường ảo (Virtual Environments)
 venv/
+env/
+ENV/
+.env
 .venv/
 
-# Environment
-.env
+# File biên dịch của Python (Python bytecode)
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Node.js
-node_modules/
+# Thư mục phân phối / gói
 dist/
+build/
+*.egg-info/
+
+# File cấu hình cá nhân hoặc hệ điều hành
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
