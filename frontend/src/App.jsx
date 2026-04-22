@@ -11,7 +11,8 @@ import SendSalaryEmailsPage from './pages/SendSalaryEmailsPage'
 import NotImplementedPage from './pages/NotImplementedPage'
 import RequireAuth from './components/RequireAuth'
 import DepartmentPage from './pages/DepartmentPage'
-import PositionPage from './pages/PositionPage' // Import trang Chức vụ mới
+import PositionPage from './pages/PositionPage'
+import HistorySalariesPage from './pages/HistorySalariesPage'
 
 function App() {
   const linkClassName = ({ isActive }) =>
@@ -48,7 +49,7 @@ function App() {
               Cập nhật lương
             </NavLink>
             <NavLink to="/history-salaries" className={linkClassName}>
-              Lịch sử lương (chưa có)
+              Lịch sử lương
             </NavLink>
             <NavLink to="/salaries-month" className={linkClassName}>
               Lọc theo tháng (chưa có)
@@ -163,7 +164,7 @@ function App() {
               path="/history-salaries"
               element={
                 <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/history-salaries/1" />
+                  <HistorySalariesPage />
                 </RequireAuth>
               }
             />

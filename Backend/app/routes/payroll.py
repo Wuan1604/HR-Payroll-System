@@ -164,3 +164,84 @@ def send_emails():
     finally:
         my_conn.close()
         sql_conn.close()
+
+
+# ---------------------------
+# 5. LỊCH SỬ LƯƠNG THEO NHÂN VIÊN
+# ---------------------------
+@payroll_bp.route('/history-salaries/<int:employee_id>', methods=['GET'])
+@login_required
+def history_salaries(employee_id):
+    my_conn = get_mysql_connection()
+    sql_conn = get_sqlserver_connection()
+
+    if not my_conn or not sql_conn:
+        return jsonify({"error": "Lỗi kết nối cơ sở dữ liệu"}), 500
+
+    try:
+        my_cursor = my_conn.cursor(dictionary=True)
+        sql_cursor = sql_conn.cursor()
+
+        sql_cursor.execute(
+            """
+            SELECT e.EmployeeID, e.FullName, e.Email, e.Status,
+                   d.DepartmentName, p.PositionName
+            FROM Employees e
+            LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN Positions p ON e.PositionID = p.PositionID
+            WHERE e.EmployeeID = ?
+            """,
+            (employee_id,)
+        )
+        employee_row = sql_cursor.fetchone()
+
+        if not employee_row:
+            return jsonify({"error": f"Không tìm thấy nhân viên có mã {employee_id}"}), 404
+
+        employee = {
+            "EmployeeID": employee_row[0],
+            "FullName": employee_row[1],
+            "Email": employee_row[2],
+            "Status": employee_row[3],
+            "DepartmentName": employee_row[4],
+            "PositionName": employee_row[5],
+        }
+
+        my_cursor.execute(
+            """
+            SELECT SalaryID, EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions,
+                   NetSalary, CreatedAt
+            FROM salaries
+            WHERE EmployeeID = %s
+            ORDER BY SalaryMonth DESC, CreatedAt DESC, SalaryID DESC
+            """,
+            (employee_id,)
+        )
+        salary_rows = my_cursor.fetchall()
+
+        history = []
+        for row in salary_rows:
+            history.append({
+                "SalaryID": row["SalaryID"],
+                "EmployeeID": row["EmployeeID"],
+                "SalaryMonth": str(row["SalaryMonth"]),
+                "BaseSalary": float(row["BaseSalary"]),
+                "Bonus": float(row["Bonus"]),
+                "Deductions": float(row["Deductions"]),
+                "NetSalary": float(row["NetSalary"]),
+                "CreatedAt": str(row["CreatedAt"]) if row.get("CreatedAt") else None,
+            })
+
+        latest_salary = history[0] if history else None
+
+        return jsonify({
+            "employee": employee,
+            "history": history,
+            "count": len(history),
+            "latest_salary": latest_salary,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        my_conn.close()
+        sql_conn.close()
