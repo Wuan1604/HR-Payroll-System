@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { addEmployee, getDepartments, getPositions } from '../api/humanApi' // Giả sử bạn đã khai báo 2 hàm này
-
+import '../styles/AddEmployeePage.css' 
 export default function AddEmployeePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -94,75 +94,86 @@ export default function AddEmployeePage() {
   }
 
   return (
-    <div>
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Thêm nhân viên</h2>
-        <div className="muted">
-          Thông tin sẽ được lưu đồng thời vào SSMS (Chức vụ) và Navicat (Phòng ban).
-        </div>
+  <div className="add-employee-page">
+    <div className="add-employee-header card">
+      <div>
+        <h2>Thêm nhân viên</h2>
+        <p>
+          Thông tin sẽ được lưu đồng thời vào SSMS và đồng bộ sang hệ thống Payroll.
+        </p>
+      </div>
+    </div>
+
+    {loading && !departments.length ? <Loading /> : null}
+    {error ? <ApiError error={error} /> : null}
+
+    {message ? (
+      <div className="add-success-message">
+        {message}
+      </div>
+    ) : null}
+
+    <form className="add-employee-form card" onSubmit={onSubmit}>
+      <div className="employee-form-grid">
+        {fields.map((f) => (
+          <label key={f.key} className="employee-form-group">
+            <span>{f.label}</span>
+
+            {f.type === 'select' && (
+              <select
+                className="employee-input"
+                value={form[f.key]}
+                onChange={(e) => update(f.key, e.target.value)}
+              >
+                {f.options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {f.type === 'db_select' && (
+              <select
+                className="employee-input"
+                value={form[f.key]}
+                onChange={(e) => update(f.key, e.target.value)}
+              >
+                {f.data.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {!['select', 'db_select'].includes(f.type) && (
+              <input
+                className="employee-input"
+                type={f.type || 'text'}
+                value={form[f.key]}
+                onChange={(e) => update(f.key, e.target.value)}
+                required={f.key === 'FullName'}
+              />
+            )}
+          </label>
+        ))}
       </div>
 
-      {(loading && !departments.length) ? <Loading /> : null}
-      {error ? <ApiError error={error} /> : null}
-      {message ? <div className="card" style={{ color: 'green', fontWeight: 'bold' }}>{message}</div> : null}
+      <div className="add-form-actions">
+        <button className="btn-submit-employee" type="submit" disabled={loading}>
+          {loading ? 'Đang lưu...' : 'Lưu nhân viên'}
+        </button>
 
-      <form className="card" onSubmit={onSubmit}>
-        <div className="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {fields.map((f) => (
-            <label key={f.key} style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="muted" style={{ marginBottom: 6 }}>
-                {f.label}
-              </span>
-              
-              {/* RENDER SELECT TĨNH (Gender, Status) */}
-              {f.type === 'select' && (
-                <select
-                  className="input"
-                  value={form[f.key]}
-                  onChange={(e) => update(f.key, e.target.value)}
-                >
-                  {f.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-              )}
-
-              {/* RENDER SELECT TỪ DATABASE (Phòng ban, Chức vụ) */}
-              {f.type === 'db_select' && (
-                <select
-                  className="input"
-                  value={form[f.key]}
-                  onChange={(e) => update(f.key, e.target.value)}
-                >
-                  {f.data.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* RENDER INPUT THƯỜNG */}
-              {!['select', 'db_select'].includes(f.type) && (
-                <input
-                  className="input"
-                  type={f.type || 'text'}
-                  value={form[f.key]}
-                  onChange={(e) => update(f.key, e.target.value)}
-                  required={f.key === 'FullName'}
-                />
-              )}
-            </label>
-          ))}
-        </div>
-
-        <div className="row" style={{ marginTop: 20, display: 'flex', gap: '10px' }}>
-          <button className="btn" type="submit" disabled={loading} style={{ backgroundColor: '#007bff', color: 'white' }}>
-            Lưu nhân viên
-          </button>
-          <button className="btn" type="button" onClick={() => navigate('/employees-page')}>
-            Quay lại
-          </button>
-        </div>
-      </form>
-    </div>
-  )
+        <button
+          className="btn-back-employee"
+          type="button"
+          onClick={() => navigate('/employees-page')}
+        >
+          Quay lại
+        </button>
+      </div>
+    </form>
+  </div>
+)
 }

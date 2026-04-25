@@ -2,164 +2,196 @@ import { useEffect, useState } from 'react';
 import { showPositions, addPosition, updatePosition, deletePosition } from '../api/humanApi';
 import Loading from '../components/Loading';
 import ApiError from '../components/ApiError';
+import '../styles/PositionPage.css';
 
 export default function PositionPage() {
-    const [positions, setPositions] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    
-    // State cho thêm mới
-    const [newName, setNewName] = useState('');
-    
-    // State cho chỉnh sửa
-    const [editingId, setEditingId] = useState(null);
-    const [editName, setEditName] = useState('');
+  const [positions, setPositions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+  const [newName, setNewName] = useState('');
 
-    async function loadData() {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await showPositions();
-            setPositions(data);
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await showPositions();
+      setPositions(data);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    async function handleAdd(e) {
-        e.preventDefault();
-        if (!newName.trim()) return;
-        try {
-            await addPosition(newName);
-            setNewName('');
-            loadData();
-        } catch (e) {
-            alert("Lỗi khi thêm chức vụ");
-        }
+  async function handleAdd(e) {
+    e.preventDefault();
+
+    if (!newName.trim()) return;
+
+    try {
+      await addPosition(newName);
+      setNewName('');
+      loadData();
+    } catch (e) {
+      alert('Lỗi khi thêm chức vụ');
     }
+  }
 
-    async function handleDelete(id) {
-        if (window.confirm("Bạn có chắc chắn muốn xóa chức vụ này? (Lưu ý: Không thể xóa nếu có nhân viên đang giữ chức vụ này)")) {
-            try {
-                await deletePosition(id);
-                loadData();
-            } catch (e) {
-                alert(e.message || "Không thể xóa chức vụ này");
-            }
-        }
+  async function handleDelete(id) {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa chức vụ này?')) return;
+
+    try {
+      await deletePosition(id);
+      loadData();
+    } catch (e) {
+      alert(e.message || 'Không thể xóa chức vụ này');
     }
+  }
 
-    async function handleUpdate(id) {
-        if (!editName.trim()) return;
-        try {
-            await updatePosition({ PositionID: id, PositionName: editName });
-            setEditingId(null);
-            loadData();
-        } catch (e) {
-            alert("Lỗi khi cập nhật");
-        }
+  async function handleUpdate(id) {
+    if (!editName.trim()) return;
+
+    try {
+      await updatePosition({ PositionID: id, PositionName: editName });
+      setEditingId(null);
+      setEditName('');
+      loadData();
+    } catch (e) {
+      alert('Lỗi khi cập nhật');
     }
+  }
 
-    return (
+  function handleCancelEdit() {
+    setEditingId(null);
+    setEditName('');
+  }
+
+  return (
+    <div className="position-page">
+      <div className="position-header card">
         <div>
-            <div className="card">
-                <h2 style={{ marginTop: 0 }}>Quản lý Chức vụ</h2>
-                <div className="muted">
-                    Dữ liệu được quản lý tại SSMS (SQL Server) và đồng bộ sang MySQL.
-                </div>
-            </div>
-
-            {error && <ApiError error={error} />}
-
-            {/* Form thêm mới */}
-            <form className="card" onSubmit={handleAdd} style={{ display: 'flex', gap: 10 }}>
-                <input 
-                    className="input" 
-                    placeholder="Nhập tên chức vụ mới..." 
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    style={{ flex: 1 }}
-                />
-                <button className="btn" type="submit" disabled={loading}>
-                    Thêm chức vụ
-                </button>
-            </form>
-
-            <div className="card">
-                {loading && positions.length === 0 ? (
-                    <Loading />
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
-                                <th style={{ padding: '12px 8px' }}>Mã</th>
-                                <th style={{ padding: '12px 8px' }}>Tên chức vụ</th>
-                                <th style={{ padding: '12px 8px', textAlign: 'right' }}>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {positions.map((pos) => (
-                                <tr key={pos.PositionID} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '12px 8px' }}>{pos.PositionID}</td>
-                                    <td style={{ padding: '12px 8px' }}>
-                                        {editingId === pos.PositionID ? (
-                                            <input 
-                                                className="input"
-                                                value={editName}
-                                                onChange={e => setEditName(e.target.value)}
-                                                autoFocus
-                                            />
-                                        ) : (
-                                            pos.PositionName
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                                        {editingId === pos.PositionID ? (
-                                            <>
-                                                <button className="btn" onClick={() => handleUpdate(pos.PositionID)} style={{ marginRight: 5 }}>Lưu</button>
-                                                <button className="btn" onClick={() => setEditingId(null)}>Hủy</button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button 
-                                                    className="btn" 
-                                                    onClick={() => {
-                                                        setEditingId(pos.PositionID);
-                                                        setEditName(pos.PositionName);
-                                                    }}
-                                                    style={{ marginRight: 5 }}
-                                                >
-                                                    Sửa
-                                                </button>
-                                                <button 
-                                                    className="btn" 
-                                                    style={{ backgroundColor: '#dc3545', color: 'white' }}
-                                                    onClick={() => handleDelete(pos.PositionID)}
-                                                >
-                                                    Xóa
-                                                </button>
-                                            </>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {positions.length === 0 && !loading && (
-                                <tr>
-                                    <td colSpan="3" style={{ textAlign: 'center', padding: 20 }} className="muted">
-                                        Chưa có dữ liệu chức vụ.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+          <h2>Quản lý Chức vụ</h2>
+          <p>Dữ liệu được quản lý tại SQL Server và đồng bộ sang MySQL.</p>
         </div>
-    );
+
+        <button className="btn-refresh-position" onClick={loadData} disabled={loading}>
+          Làm mới
+        </button>
+      </div>
+
+      {error && <ApiError error={error} />}
+
+      <form className="position-add-form card" onSubmit={handleAdd}>
+        <input
+          className="position-input"
+          placeholder="Nhập tên chức vụ mới..."
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+
+        <button className="btn-add-position" type="submit" disabled={loading}>
+          Thêm chức vụ
+        </button>
+      </form>
+
+      <div className="position-table-wrapper">
+        {loading && positions.length === 0 ? (
+          <Loading />
+        ) : (
+          <table className="position-table">
+            <thead>
+              <tr>
+                <th>Mã</th>
+                <th>Tên chức vụ</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {positions.map((pos) => (
+                <tr key={pos.PositionID}>
+                  <td>{pos.PositionID}</td>
+
+                  <td>
+                    {editingId === pos.PositionID ? (
+                      <input
+                        className="position-input edit-position-input"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="position-name">{pos.PositionName}</span>
+                    )}
+                  </td>
+
+                  <td>
+                    <div className="position-actions">
+                      {editingId === pos.PositionID ? (
+                        <>
+                          <button
+                            className="btn-save-position"
+                            type="button"
+                            onClick={() => handleUpdate(pos.PositionID)}
+                          >
+                            Lưu
+                          </button>
+
+                          <button
+                            className="btn-cancel-position"
+                            type="button"
+                            onClick={handleCancelEdit}
+                          >
+                            Hủy
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn-edit-position"
+                            type="button"
+                            onClick={() => {
+                              setEditingId(pos.PositionID);
+                              setEditName(pos.PositionName);
+                            }}
+                          >
+                            Sửa
+                          </button>
+
+                          <button
+                            className="btn-delete-position"
+                            type="button"
+                            onClick={() => handleDelete(pos.PositionID)}
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {positions.length === 0 && !loading && (
+                <tr>
+                  <td colSpan="3" className="position-empty">
+                    Chưa có dữ liệu chức vụ.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-# Thống nhất tên hàm kết nối từ database.py của bạn
 from app.database import get_mysql_connection, get_sqlserver_connection 
 from ..config import Config
 from app.auth import login_required

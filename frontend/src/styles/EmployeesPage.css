@@ -1,0 +1,248 @@
+        .employees-page {
+    padding: 4px;
+}
+
+.employees-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.employees-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #0f172a;
+}
+
+.employees-header p {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.btn-refresh {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-refresh:hover {
+    background: #1d4ed8;
+}
+
+.btn-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.employees-table-wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.employees-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.employees-table thead {
+    background: #f8fafc;
+}
+
+.employees-table th {
+    text-align: left;
+    padding: 14px 16px;
+    color: #334155;
+    font-weight: 700;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.employees-table td {
+    padding: 14px 16px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.employees-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.employee-name {
+    font-weight: 700;
+    color: #0f172a !important;
+}
+
+.status-badge {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-edit,
+.btn-delete {
+    border: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-edit {
+    background: #f59e0b;
+}
+
+.btn-edit:hover {
+    background: #d97706;
+}
+
+.btn-delete {
+    background: #dc2626;
+}
+
+.btn-delete:hover {
+    background: #b91c1c;
+}
+
+.empty-row {
+    text-align: center;
+    color: #64748b !important;
+    padding: 24px !important;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 16px;
+}
+
+.employee-modal {
+    width: 430px;
+    max-width: 100%;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    animation: modalFadeIn 0.2s ease;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 22px;
+}
+
+.modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    background: #e2e8f0;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-save,
+.btn-cancel {
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-save {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #1d4ed8;
+}
+
+.btn-cancel {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.btn-cancel:hover {
+    background: #d1d5db;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale
