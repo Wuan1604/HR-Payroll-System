@@ -46,14 +46,12 @@ function App() {
               Bảng lương
             </NavLink>
             <NavLink to="/update-salary" className={linkClassName}>
-              Cập nhật lương
+              Tạo bảng lương
             </NavLink>
             <NavLink to="/history-salaries" className={linkClassName}>
               Lịch sử lương
             </NavLink>
-            <NavLink to="/salaries-month" className={linkClassName}>
-              Lọc theo tháng (chưa có)
-            </NavLink>
+            
             <NavLink to="/report-salaries" className={linkClassName}>
               Báo cáo lương (chưa có)
             </NavLink>

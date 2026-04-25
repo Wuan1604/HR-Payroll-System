@@ -4,6 +4,10 @@ export function getSalaries() {
     return apiFetch('/api/payroll/show-salaries')
 }
 
+export function showSalaries() {
+    return apiFetch('/api/payroll/show-salaries')
+}
+
 export function getTimekeeping() {
     return apiFetch('/api/payroll/timekeeping')
 }

@@ -1,0 +1,452 @@
+.history-salary-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+
+/* Header */
+
+.history-header-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.history-header-card h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.history-header-card p {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+
+/* Filter */
+
+.history-filter-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+    display: flex;
+    align-items: end;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.history-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 340px;
+}
+
+.history-field span {
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.history-field select {
+    width: 100%;
+    height: 44px;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    padding: 0 13px;
+    color: #0f172a;
+    background: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s ease;
+}
+
+.history-field select:focus {
+    border-color: #1e293b;
+    box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+}
+
+
+/* Buttons */
+
+.history-refresh-btn,
+.history-search-btn {
+    border: none;
+    outline: none;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.history-refresh-btn:hover,
+.history-search-btn:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+}
+
+.history-refresh-btn:disabled,
+.history-search-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
+/* Employee info */
+
+.employee-history-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.employee-history-card h3 {
+    margin: 0 0 16px;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.employee-history-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 14px;
+}
+
+.employee-history-grid div {
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.employee-history-grid span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.employee-history-grid strong {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+
+/* Statistic cards */
+
+.salary-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.salary-stat-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.salary-stat-card span {
+    display: block;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.salary-stat-card strong {
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 900;
+}
+
+.salary-stat-card.highlight {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+.salary-stat-card.highlight span {
+    color: #cbd5e1;
+}
+
+.salary-stat-card.highlight strong {
+    color: #ffffff;
+}
+
+
+/* Empty */
+
+.history-empty-card {
+    padding: 16px;
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+
+/* Table */
+
+.history-table-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.history-table-header {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.history-table-header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.history-table-header span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.history-table-wrapper {
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+}
+
+.history-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+    font-size: 14px;
+    color: #334155;
+}
+
+.history-table thead {
+    background: #f8fafc;
+}
+
+.history-table th {
+    padding: 14px 16px;
+    text-align: left;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.history-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+    white-space: nowrap;
+}
+
+.history-table tbody tr {
+    transition: 0.2s ease;
+}
+
+.history-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table td strong {
+    color: #047857;
+    background: #ecfdf5;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+}
+
+.history-empty-row {
+    text-align: center;
+    padding: 24px !important;
+    color: #64748b;
+    font-weight: 700;
+}
+
+
+/* Scrollbar */
+
+.history-table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.history-table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 999px;
+}
+
+.history-table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.history-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+
+/* Responsive */
+
+@media (max-width: 1100px) {
+    .employee-history-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+    .salary-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .history-header-card,
+    .history-filter-card,
+    .employee-history-card,
+    .history-table-card,
+    .salary-stat-card {
+        padding: 18px;
+        border-radius: 14px;
+    }
+    .history-header-card h2 {
+        font-size: 22px;
+    }
+    .history-field {
+        min-width: 100%;
+    }
+    .history-refresh-btn,
+    .history-search-btn {
+        width: 100%;
+    }
+    .employee-history-grid {
+        grid-template-columns: 1fr;
+    }
+    .salary-stat-card strong {
+        font-size: 22px;
+    }
+}
+/* PDF export actions */
+.history-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.history-export-btn {
+    border: none;
+    outline: none;
+    background: #047857;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.history-export-btn:hover {
+    background: #065f46;
+    transform: translateY(-1px);
+}
+
+.history-export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.salary-history-pdf-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #ffffff;
+}
+
+.pdf-title-block {
+    display: none;
+    text-align: center;
+    padding: 18px 12px 8px;
+    background: #ffffff;
+}
+
+.pdf-title-block h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+}
+
+.pdf-title-block p {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.salary-history-pdf-area.is-exporting-pdf {
+    padding: 18px;
+}
+
+.salary-history-pdf-area.is-exporting-pdf .pdf-title-block {
+    display: block;
+}
+
+.salary-history-pdf-area.is-exporting-pdf .employee-history-card,
+.salary-history-pdf-area.is-exporting-pdf .salary-stat-card,
+.salary-history-pdf-area.is-exporting-pdf .history-table-card {
+    box-shadow: none;
+}
+
+@media (max-width: 640px) {
+    .history-header-actions {
+        width: 100%;
+    }
+    .history-export-btn {
+        width: 100%;
+    }
+}

@@ -1,39 +1,65 @@
 import { useEffect, useMemo, useState } from 'react'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
-import { getSalaries } from '../api/payrollApi'
-import { updateSalary } from '../api/payrollApi'
+import { getSalaries, updateSalary } from '../api/payrollApi'
+import '../styles/UpdateSalaryPage.css'
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('vi-VN') + ' VNĐ'
+}
+
+function normalizeDate(value) {
+  if (!value) return ''
+  return String(value).slice(0, 10)
+}
+
+function toMonthInputValue(value) {
+  if (!value) return ''
+  return String(value).slice(0, 7)
+}
+
+function toSalaryDate(monthValue) {
+  if (!monthValue) return ''
+  return `${monthValue}-01`
+}
+
+function getCurrentMonth() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+function makeRowKey(row) {
+  return `${row?.EmployeeID ?? ''}|${row?.SalaryID ?? 0}|${normalizeDate(row?.SalaryMonth)}`
+}
 
 export default function UpdateSalaryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
-
-  const [selectedSalaryID, setSelectedSalaryID] = useState('')
-  const selectedRow = useMemo(
-    () => rows.find((r) => String(r?.SalaryID) === String(selectedSalaryID)),
-    [rows, selectedSalaryID],
-  )
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
 
   const [form, setForm] = useState({
+    SalaryMonth: getCurrentMonth(),
     BaseSalary: '',
     Bonus: '',
     Deductions: '',
   })
 
-  const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState(null)
-
   async function load() {
     setLoading(true)
     setError(null)
-    setResult(null)
+
     try {
       const res = await getSalaries()
       const arr = Array.isArray(res) ? res : []
       setRows(arr)
-      if (arr.length > 0 && !selectedSalaryID) {
-        setSelectedSalaryID(String(arr[0].SalaryID ?? ''))
+
+      if (arr.length > 0 && !selectedEmployeeId) {
+        setSelectedEmployeeId(String(arr[0].EmployeeID))
       }
     } catch (e) {
       setError(e)
@@ -47,37 +73,134 @@ export default function UpdateSalaryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    if (!selectedRow) return
-    setForm({
-      BaseSalary: selectedRow.BaseSalary ?? '',
-      Bonus: selectedRow.Bonus ?? '',
-      Deductions: selectedRow.Deductions ?? '',
-    })
-  }, [selectedRow])
+  const employees = useMemo(() => {
+    const map = new Map()
 
-  function computeNet() {
-    const base = Number(form.BaseSalary || 0)
-    const bonus = Number(form.Bonus || 0)
-    const deduct = Number(form.Deductions || 0)
-    return base + bonus - deduct
+    rows.forEach((item) => {
+      if (!map.has(item.EmployeeID)) {
+        map.set(item.EmployeeID, {
+          EmployeeID: item.EmployeeID,
+          FullName: item.FullName,
+          DepartmentName: item.DepartmentName,
+          PositionName: item.PositionName,
+          Status: item.Status,
+        })
+      }
+    })
+
+    return Array.from(map.values())
+  }, [rows])
+
+  const selectedEmployee = useMemo(() => {
+    return employees.find(
+      (item) => String(item.EmployeeID) === String(selectedEmployeeId)
+    )
+  }, [employees, selectedEmployeeId])
+
+  const selectedSalary = useMemo(() => {
+    const salaryDate = toSalaryDate(form.SalaryMonth)
+
+    return rows.find(
+      (item) =>
+        String(item.EmployeeID) === String(selectedEmployeeId) &&
+        normalizeDate(item.SalaryMonth) === salaryDate &&
+        Number(item.SalaryID || 0) > 0
+    )
+  }, [rows, selectedEmployeeId, form.SalaryMonth])
+
+  const netSalary =
+    Number(form.BaseSalary || 0) +
+    Number(form.Bonus || 0) -
+    Number(form.Deductions || 0)
+
+  function fillSalaryByEmployeeAndMonth(employeeId, monthValue) {
+    const salaryDate = toSalaryDate(monthValue)
+
+    const oldSalary = rows.find(
+      (item) =>
+        String(item.EmployeeID) === String(employeeId) &&
+        normalizeDate(item.SalaryMonth) === salaryDate &&
+        Number(item.SalaryID || 0) > 0
+    )
+
+    if (oldSalary) {
+      setForm({
+        SalaryMonth: monthValue,
+        BaseSalary: oldSalary.BaseSalary ?? '',
+        Bonus: oldSalary.Bonus ?? '',
+        Deductions: oldSalary.Deductions ?? '',
+      })
+    } else {
+      setForm({
+        SalaryMonth: monthValue,
+        BaseSalary: '',
+        Bonus: '',
+        Deductions: '',
+      })
+    }
+  }
+
+  function handleSelectEmployee(e) {
+    const employeeId = e.target.value
+    setSelectedEmployeeId(employeeId)
+    fillSalaryByEmployeeAndMonth(employeeId, form.SalaryMonth)
+    setMessage('')
+  }
+
+  function handleSelectMonth(e) {
+    const monthValue = e.target.value
+    fillSalaryByEmployeeAndMonth(selectedEmployeeId, monthValue)
+    setMessage('')
+  }
+
+  function handleChange(e) {
+    const { name, value } = e.target
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+
+    setMessage('')
   }
 
   async function onSubmit(e) {
     e.preventDefault()
     setSaving(true)
     setError(null)
-    setResult(null)
+    setMessage('')
+
     try {
-      if (!selectedSalaryID) throw new Error('Bạn cần chọn `SalaryID`.')
+      if (!selectedEmployee?.EmployeeID) {
+        throw new Error('Bạn cần chọn nhân viên để tạo bảng lương.')
+      }
+
+      if (!form.SalaryMonth) {
+        throw new Error('Bạn cần chọn tháng lương.')
+      }
+
       const payload = {
-        SalaryID: Number(selectedSalaryID),
+        EmployeeID: Number(selectedEmployee.EmployeeID),
+        SalaryID: Number(selectedSalary?.SalaryID || 0),
+        SalaryMonth: toSalaryDate(form.SalaryMonth),
         BaseSalary: Number(form.BaseSalary || 0),
         Bonus: Number(form.Bonus || 0),
         Deductions: Number(form.Deductions || 0),
       }
+
       const res = await updateSalary(payload)
-      setResult(res)
+
+      setMessage(
+        selectedSalary
+          ? 'Cập nhật bảng lương thành công.'
+          : 'Tạo bảng lương mới thành công.'
+      )
+
+      await load()
+
+      if (res?.EmployeeID) {
+        setSelectedEmployeeId(String(res.EmployeeID))
+      }
     } catch (e) {
       setError(e)
     } finally {
@@ -86,93 +209,150 @@ export default function UpdateSalaryPage() {
   }
 
   return (
-    <div>
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Cập nhật lương</h2>
-        <div className="muted">
-          Gọi POST <code>/api/payroll/update-salary</code>.
+    <div className="update-salary-page">
+      <div className="salary-header-card">
+        <div>
+          <h2>Tạo bảng lương hàng tháng</h2>
+          <p>
+            Chọn nhân viên, chọn tháng lương, nhập các khoản tiền và lưu bảng lương.
+          </p>
         </div>
+
+        <button className="btn salary-refresh-btn" onClick={load} disabled={loading || saving}>
+          Làm mới
+        </button>
       </div>
 
       {loading ? <Loading /> : null}
       {error ? <ApiError error={error} /> : null}
 
       {!loading && !error ? (
-        <form className="card" onSubmit={onSubmit}>
-          <div className="row">
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="muted" style={{ marginBottom: 6 }}>
-                Chọn bản ghi lương
-              </span>
-              <select
-                className="input"
-                value={selectedSalaryID}
-                onChange={(e) => setSelectedSalaryID(e.target.value)}
-              >
-                {rows.map((r) => (
-                  <option key={r.SalaryID} value={String(r.SalaryID)}>
-                    {r.SalaryID} - {r?.FullName} ({r?.SalaryMonth})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+        <form className="salary-form-card" onSubmit={onSubmit}>
+          <div className="salary-section">
+            <h3>Thông tin nhân viên</h3>
 
-          <div className="row" style={{ marginTop: 14 }}>
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="muted" style={{ marginBottom: 6 }}>
-                BaseSalary
-              </span>
-              <input
-                className="input"
-                value={form.BaseSalary}
-                onChange={(e) => setForm((p) => ({ ...p, BaseSalary: e.target.value }))}
-              />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="muted" style={{ marginBottom: 6 }}>
-                Bonus
-              </span>
-              <input
-                className="input"
-                value={form.Bonus}
-                onChange={(e) => setForm((p) => ({ ...p, Bonus: e.target.value }))}
-              />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              <span className="muted" style={{ marginBottom: 6 }}>
-                Deductions
-              </span>
-              <input
-                className="input"
-                value={form.Deductions}
-                onChange={(e) => setForm((p) => ({ ...p, Deductions: e.target.value }))}
-              />
-            </label>
-          </div>
+            <div className="salary-grid two-cols">
+              <label className="salary-field">
+                <span>Chọn nhân viên</span>
+                <select
+                  value={selectedEmployeeId}
+                  onChange={handleSelectEmployee}
+                >
+                  {employees.length === 0 ? (
+                    <option value="">Chưa có nhân viên trong payroll</option>
+                  ) : (
+                    <option value="">-- Chọn nhân viên --</option>
+                  )}
 
-          <div className="row" style={{ marginTop: 14 }}>
-            <div className="muted">
-              NetSalary dự kiến: <b>{computeNet()}</b>
+                  {employees.map((emp) => (
+                    <option key={emp.EmployeeID} value={emp.EmployeeID}>
+                      {emp.EmployeeID} - {emp.FullName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="salary-field">
+                <span>Tháng lương</span>
+                <input
+                  type="month"
+                  value={form.SalaryMonth}
+                  onChange={handleSelectMonth}
+                />
+              </label>
             </div>
-            <button className="btn" type="submit" disabled={saving}>
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+
+            {selectedEmployee ? (
+              <div className="employee-summary-box">
+                <div>
+                  <span>Mã nhân viên</span>
+                  <strong>{selectedEmployee.EmployeeID}</strong>
+                </div>
+
+                <div>
+                  <span>Họ và tên</span>
+                  <strong>{selectedEmployee.FullName}</strong>
+                </div>
+
+                <div>
+                  <span>Phòng ban</span>
+                  <strong>{selectedEmployee.DepartmentName || 'Chưa có'}</strong>
+                </div>
+
+                <div>
+                  <span>Chức vụ</span>
+                  <strong>{selectedEmployee.PositionName || 'Chưa có'}</strong>
+                </div>
+
+                <div>
+                  <span>Trạng thái</span>
+                  <strong>{selectedEmployee.Status || 'Chưa có'}</strong>
+                </div>
+              </div>
+            ) : null}
+
+            {selectedEmployee ? (
+              <div className={selectedSalary ? 'salary-note warning' : 'salary-note'}>
+                {selectedSalary
+                  ? `Tháng ${toMonthInputValue(selectedSalary.SalaryMonth)} đã có bảng lương. Khi lưu, hệ thống sẽ cập nhật lại dữ liệu.`
+                  : 'Tháng này chưa có bảng lương. Khi lưu, hệ thống sẽ tạo bảng lương mới.'}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="salary-section">
+            <h3>Thông tin tiền lương</h3>
+
+            <div className="salary-grid three-cols">
+              <label className="salary-field">
+                <span>Lương cơ bản</span>
+                <input
+                  type="number"
+                  name="BaseSalary"
+                  value={form.BaseSalary}
+                  onChange={handleChange}
+                  placeholder="Nhập lương cơ bản"
+                />
+              </label>
+
+              <label className="salary-field">
+                <span>Thưởng</span>
+                <input
+                  type="number"
+                  name="Bonus"
+                  value={form.Bonus}
+                  onChange={handleChange}
+                  placeholder="Nhập tiền thưởng"
+                />
+              </label>
+
+              <label className="salary-field">
+                <span>Khấu trừ</span>
+                <input
+                  type="number"
+                  name="Deductions"
+                  value={form.Deductions}
+                  onChange={handleChange}
+                  placeholder="Nhập tiền khấu trừ"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="salary-total-card">
+            <div>
+              <span>Lương thực nhận dự kiến</span>
+              <strong>{formatMoney(netSalary)}</strong>
+            </div>
+
+            <button className="btn salary-save-btn" type="submit" disabled={saving || !selectedEmployee}>
+              {saving ? 'Đang lưu...' : selectedSalary ? 'Cập nhật bảng lương' : 'Tạo bảng lương'}
             </button>
           </div>
-          {result ? (
-            <div className="card" style={{ marginTop: 14 }}>
-              <h3 style={{ marginTop: 0 }}>Kết quả</h3>
-              <div className="muted">
-                {result?.message || 'OK'}
-              </div>
-              <pre style={{ textAlign: 'left', whiteSpace: 'pre-wrap', marginTop: 10 }}>
-                {JSON.stringify(result, null, 2)}
-              </pre>
-            </div>
-          ) : null}
+
+          {message ? <div className="salary-success-message">{message}</div> : null}
         </form>
       ) : null}
     </div>
   )
 }
-
