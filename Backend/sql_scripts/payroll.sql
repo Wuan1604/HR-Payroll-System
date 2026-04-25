@@ -159,3 +159,23 @@ INSERT INTO `salaries` VALUES (19, 9, '2024-09-01', 5000000.00, 0.00, 0.00, 5000
 INSERT INTO `salaries` VALUES (20, 10, '2024-09-01', 8500000.00, 300000.00, 100000.00, 8700000.00, '2025-10-20 19:15:00');
 
 SET FOREIGN_KEY_CHECKS = 1;
+-- ----------------------------
+-- Table structure for attendance_details
+-- Dùng cho chức năng chấm công chi tiết theo ngày: giờ vào, giờ ra, tổng giờ, công và ghi chú.
+-- Nếu database đã có dữ liệu, có thể chạy riêng đoạn CREATE TABLE IF NOT EXISTS này.
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `attendance_details` (
+  `DetailID` int NOT NULL AUTO_INCREMENT,
+  `EmployeeID` int NOT NULL,
+  `WorkDate` date NOT NULL,
+  `CheckIn` time NULL DEFAULT NULL,
+  `CheckOut` time NULL DEFAULT NULL,
+  `TotalHours` decimal(5,2) NULL DEFAULT 0.00,
+  `WorkUnit` decimal(4,2) NULL DEFAULT 0.00,
+  `Status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'Đi làm',
+  `Note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `CreatedAt` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `UpdatedAt` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`DetailID`) USING BTREE,
+  UNIQUE KEY `unique_employee_date` (`EmployeeID`, `WorkDate`)
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;

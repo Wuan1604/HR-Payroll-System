@@ -279,3 +279,87 @@
         font-size: 24px;
     }
 }
+/* Attendance deduction suggestion */
+.salary-attendance-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.salary-attendance-summary div {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.salary-attendance-summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.salary-attendance-summary strong {
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.salary-attendance-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.salary-secondary-btn {
+  border: none;
+  outline: none;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.salary-secondary-btn:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.salary-secondary-btn.apply {
+  background: #047857;
+  color: #ffffff;
+}
+
+.salary-secondary-btn.apply:hover {
+  background: #065f46;
+}
+
+.salary-secondary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .salary-attendance-summary {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .salary-attendance-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .salary-secondary-btn {
+    width: 100%;
+  }
+}

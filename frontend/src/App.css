@@ -300,3 +300,27 @@
     border-right-color: var(--border);
   }
 }
+.sidebar__user {
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  margin-bottom: 14px;
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebar__user span { color: #93c5fd; font-size: 13px; font-weight: 800; }
+.sidebar__logout {
+  width: 100%;
+  margin-top: 16px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.sidebar__logout:hover { background: #dc2626; }

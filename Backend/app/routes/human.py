@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.database import get_sqlserver_connection, get_mysql_connection
-from app.auth import login_required
+from app.auth import roles_required
 import pyodbc
 
 human_bp = Blueprint('human', __name__)
@@ -9,7 +9,7 @@ human_bp = Blueprint('human', __name__)
 # 1. LẤY DANH SÁCH NHÂN VIÊN (SQL Server)
 # ---------------------------------------------------------
 @human_bp.route('/employees-page', methods=['GET'])
-@login_required
+@roles_required('Admin', 'Manager')
 def get_employees():
     conn = get_sqlserver_connection()
     if not conn: 
@@ -52,7 +52,7 @@ def get_employees():
 # 2. LẤY PHÒNG BAN (Từ SQL Server - HUMAN_2025)
 # ---------------------------------------------------------
 @human_bp.route('/departments', methods=['GET'])
-@login_required
+@roles_required('Admin')
 def get_departments():
     conn = get_sqlserver_connection()
     if not conn: return jsonify({"error": "Lỗi kết nối SQL Server"}), 500
@@ -69,7 +69,7 @@ def get_departments():
 # 3. LẤY CHỨC VỤ (Từ SQL Server - HUMAN_2025)
 # ---------------------------------------------------------
 @human_bp.route('/positions', methods=['GET'])
-@login_required
+@roles_required('Admin')
 def get_positions():
     conn = get_sqlserver_connection()
     if not conn: return jsonify({"error": "Lỗi kết nối SQL Server"}), 500
@@ -86,7 +86,7 @@ def get_positions():
 # 4. THÊM NHÂN VIÊN & ĐỒNG BỘ (SQL Server -> MySQL)
 # ---------------------------------------------------------
 @human_bp.route('/add-employee', methods=['POST'])
-@login_required
+@roles_required('Admin')
 def add_employee():
     data = request.json
     
@@ -159,7 +159,7 @@ def add_employee():
 # 4.1. SỬA NHÂN VIÊN & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/update-employee', methods=['PUT'])
-@login_required
+@roles_required('Admin')
 def update_employee():
     data = request.json or {}
 
@@ -289,7 +289,7 @@ def update_employee():
 # 4.2. XÓA NHÂN VIÊN & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/delete-employee/<int:employee_id>', methods=['DELETE'])
-@login_required
+@roles_required('Admin')
 def delete_employee(employee_id):
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
@@ -364,7 +364,7 @@ def delete_employee(employee_id):
 # 5. BÁO CÁO NHÂN SỰ
 # ---------------------------------------------------------
 @human_bp.route('/report-human', methods=['GET'])
-@login_required
+@roles_required('Admin', 'Manager', 'Employee')
 def report_human():
     conn = get_sqlserver_connection()
     if not conn: return jsonify({"error": "DB Error"}), 500
@@ -400,7 +400,7 @@ def report_human():
 # ---------------------------------------------------------
 
 @human_bp.route('/show-department', methods=['GET'])
-@login_required
+@roles_required('Admin')
 def show_departments():
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
@@ -410,7 +410,7 @@ def show_departments():
     return jsonify(data), 200
 
 @human_bp.route('/add-department', methods=['POST'])
-@login_required
+@roles_required('Admin')
 def add_department():
     name = request.json.get('DepartmentName')
     sql_conn = get_sqlserver_connection()
@@ -419,7 +419,7 @@ def add_department():
     my_cursor = my_conn.cursor()
     try:
         # 1. Thêm vào SQL Server
-        sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName) VALUES (?)", (name))
+        sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName) VALUES (?)", (name,))
         sql_cursor.execute("SELECT @@IDENTITY")
         new_id = int(sql_cursor.fetchone()[0])
         sql_conn.commit()
@@ -435,7 +435,7 @@ def add_department():
         my_conn.close()
 
 @human_bp.route('/update-department', methods=['PUT'])
-@login_required
+@roles_required('Admin')
 def update_department():
     data = request.json # {DepartmentID, DepartmentName}
     sql_conn = get_sqlserver_connection()
@@ -455,14 +455,14 @@ def update_department():
         my_conn.close()
 
 @human_bp.route('/delete-department/<int:id>', methods=['DELETE'])
-@login_required
+@roles_required('Admin')
 def delete_department(id):
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
     sql_cursor = sql_conn.cursor()
     try:
         # Kiểm tra ràng buộc nhân viên trước khi xóa
-        sql_cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Employees] WHERE DepartmentID = ?", (id))
+        sql_cursor.execute("SELECT COUNT(*) FROM [HUMAN_2025].[dbo].[Employees] WHERE DepartmentID = ?", (id,))
         if sql_cursor.fetchone()[0] > 0:
             return jsonify({"error": "Không thể xóa phòng ban đang có nhân viên"}), 400
         
@@ -480,7 +480,7 @@ def delete_department(id):
 # 7.1. CẬP NHẬT CHỨC VỤ & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/update-position', methods=['PUT'])
-@login_required
+@roles_required('Admin')
 def update_position():
     data = request.json or {}
 
@@ -551,7 +551,7 @@ def update_position():
 # 7.2. XÓA CHỨC VỤ & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/show-human', methods=['GET'])
-@login_required
+@roles_required('Admin')
 def show_positions():
     conn = get_sqlserver_connection()
 
@@ -586,7 +586,7 @@ def show_positions():
 
 
 @human_bp.route('/add-position', methods=['POST'])
-@login_required
+@roles_required('Admin')
 def add_position():
     data = request.json or {}
     name = data.get('PositionName')

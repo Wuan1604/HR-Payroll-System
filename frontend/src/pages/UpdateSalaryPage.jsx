@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
-import { getSalaries, updateSalary } from '../api/payrollApi'
+import { getAttendanceSummary, getSalaries, updateSalary } from '../api/payrollApi'
 import '../styles/UpdateSalaryPage.css'
 
 function formatMoney(value) {
@@ -30,10 +30,6 @@ function getCurrentMonth() {
   return `${year}-${month}`
 }
 
-function makeRowKey(row) {
-  return `${row?.EmployeeID ?? ''}|${row?.SalaryID ?? 0}|${normalizeDate(row?.SalaryMonth)}`
-}
-
 export default function UpdateSalaryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -41,6 +37,8 @@ export default function UpdateSalaryPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [attendanceSummary, setAttendanceSummary] = useState(null)
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
 
   const [form, setForm] = useState({
     SalaryMonth: getCurrentMonth(),
@@ -113,6 +111,30 @@ export default function UpdateSalaryPage() {
     Number(form.Bonus || 0) -
     Number(form.Deductions || 0)
 
+  async function loadAttendanceSuggestion(employeeId, monthValue, baseSalaryValue) {
+    if (!employeeId || !monthValue) {
+      setAttendanceSummary(null)
+      return
+    }
+
+    setLoadingAttendance(true)
+    try {
+      const res = await getAttendanceSummary(employeeId, monthValue, baseSalaryValue || 0)
+      setAttendanceSummary(res)
+    } catch {
+      setAttendanceSummary(null)
+    } finally {
+      setLoadingAttendance(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedEmployeeId && form.SalaryMonth) {
+      loadAttendanceSuggestion(selectedEmployeeId, form.SalaryMonth, form.BaseSalary)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmployeeId, form.SalaryMonth])
+
   function fillSalaryByEmployeeAndMonth(employeeId, monthValue) {
     const salaryDate = toSalaryDate(monthValue)
 
@@ -130,6 +152,7 @@ export default function UpdateSalaryPage() {
         Bonus: oldSalary.Bonus ?? '',
         Deductions: oldSalary.Deductions ?? '',
       })
+      loadAttendanceSuggestion(employeeId, monthValue, oldSalary.BaseSalary ?? 0)
     } else {
       setForm({
         SalaryMonth: monthValue,
@@ -137,6 +160,7 @@ export default function UpdateSalaryPage() {
         Bonus: '',
         Deductions: '',
       })
+      loadAttendanceSuggestion(employeeId, monthValue, 0)
     }
   }
 
@@ -162,6 +186,24 @@ export default function UpdateSalaryPage() {
     }))
 
     setMessage('')
+  }
+
+  async function refreshAttendanceDeduction() {
+    await loadAttendanceSuggestion(selectedEmployeeId, form.SalaryMonth, form.BaseSalary)
+  }
+
+  async function applySuggestedDeduction() {
+    const res = await getAttendanceSummary(
+      selectedEmployeeId,
+      form.SalaryMonth,
+      form.BaseSalary || 0
+    )
+    setAttendanceSummary(res)
+    setForm((prev) => ({
+      ...prev,
+      Deductions: Math.round(Number(res?.suggestedDeductions || 0)),
+    }))
+    setMessage('Đã áp dụng khấu trừ đề xuất từ dữ liệu chấm công.')
   }
 
   async function onSubmit(e) {
@@ -234,10 +276,7 @@ export default function UpdateSalaryPage() {
             <div className="salary-grid two-cols">
               <label className="salary-field">
                 <span>Chọn nhân viên</span>
-                <select
-                  value={selectedEmployeeId}
-                  onChange={handleSelectEmployee}
-                >
+                <select value={selectedEmployeeId} onChange={handleSelectEmployee}>
                   {employees.length === 0 ? (
                     <option value="">Chưa có nhân viên trong payroll</option>
                   ) : (
@@ -254,11 +293,7 @@ export default function UpdateSalaryPage() {
 
               <label className="salary-field">
                 <span>Tháng lương</span>
-                <input
-                  type="month"
-                  value={form.SalaryMonth}
-                  onChange={handleSelectMonth}
-                />
+                <input type="month" value={form.SalaryMonth} onChange={handleSelectMonth} />
               </label>
             </div>
 
@@ -268,22 +303,18 @@ export default function UpdateSalaryPage() {
                   <span>Mã nhân viên</span>
                   <strong>{selectedEmployee.EmployeeID}</strong>
                 </div>
-
                 <div>
                   <span>Họ và tên</span>
                   <strong>{selectedEmployee.FullName}</strong>
                 </div>
-
                 <div>
                   <span>Phòng ban</span>
                   <strong>{selectedEmployee.DepartmentName || 'Chưa có'}</strong>
                 </div>
-
                 <div>
                   <span>Chức vụ</span>
                   <strong>{selectedEmployee.PositionName || 'Chưa có'}</strong>
                 </div>
-
                 <div>
                   <span>Trạng thái</span>
                   <strong>{selectedEmployee.Status || 'Chưa có'}</strong>
@@ -301,6 +332,49 @@ export default function UpdateSalaryPage() {
           </div>
 
           <div className="salary-section">
+            <h3>Thông tin chấm công liên quan</h3>
+
+            <div className="salary-attendance-summary">
+              <div>
+                <span>Công chuẩn</span>
+                <strong>{attendanceSummary?.standardWorkDays ?? 0}</strong>
+              </div>
+              <div>
+                <span>Công thực tế</span>
+                <strong>{attendanceSummary?.workDays ?? 0}</strong>
+              </div>
+              <div>
+                <span>Thiếu công</span>
+                <strong>{attendanceSummary?.missingWorkUnits ?? 0}</strong>
+              </div>
+              <div>
+                <span>Khấu trừ đề xuất</span>
+                <strong>{formatMoney(attendanceSummary?.suggestedDeductions || 0)}</strong>
+              </div>
+            </div>
+
+            <div className="salary-attendance-actions">
+              <button
+                type="button"
+                className="salary-secondary-btn"
+                onClick={refreshAttendanceDeduction}
+                disabled={loadingAttendance || !selectedEmployeeId}
+              >
+                {loadingAttendance ? 'Đang tính...' : 'Tính lại từ chấm công'}
+              </button>
+
+              <button
+                type="button"
+                className="salary-secondary-btn apply"
+                onClick={applySuggestedDeduction}
+                disabled={!selectedEmployeeId}
+              >
+                Áp dụng khấu trừ đề xuất
+              </button>
+            </div>
+          </div>
+
+          <div className="salary-section">
             <h3>Thông tin tiền lương</h3>
 
             <div className="salary-grid three-cols">
@@ -311,6 +385,7 @@ export default function UpdateSalaryPage() {
                   name="BaseSalary"
                   value={form.BaseSalary}
                   onChange={handleChange}
+                  onBlur={refreshAttendanceDeduction}
                   placeholder="Nhập lương cơ bản"
                 />
               </label>

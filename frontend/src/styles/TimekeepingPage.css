@@ -1,0 +1,403 @@
+.timekeeping-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timekeeping-header-card,
+.timekeeping-filter-card,
+.timekeeping-employee-card,
+.timekeeping-form-card,
+.timekeeping-table-card,
+.timekeeping-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.timekeeping-header-card {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.timekeeping-header-card h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.timekeeping-header-card p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.timekeeping-filter-card {
+  padding: 22px;
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.timekeeping-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.timekeeping-field.small {
+  min-width: 210px;
+}
+
+.timekeeping-field span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.timekeeping-field input,
+.timekeeping-field select,
+.timekeeping-field textarea {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 0 13px;
+  color: #0f172a;
+  background: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.timekeeping-field input,
+.timekeeping-field select {
+  height: 44px;
+}
+
+.timekeeping-field textarea {
+  min-height: 86px;
+  padding-top: 12px;
+  resize: vertical;
+}
+
+.timekeeping-field input:focus,
+.timekeeping-field select:focus,
+.timekeeping-field textarea:focus {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+}
+
+.timekeeping-field input:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.timekeeping-refresh-btn,
+.timekeeping-search-btn,
+.timekeeping-save-btn {
+  border: none;
+  outline: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.timekeeping-refresh-btn,
+.timekeeping-search-btn {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.timekeeping-save-btn {
+  background: #047857;
+  color: #ffffff;
+}
+
+.timekeeping-refresh-btn:hover,
+.timekeeping-search-btn:hover,
+.timekeeping-save-btn:hover {
+  transform: translateY(-1px);
+}
+
+.timekeeping-refresh-btn:hover,
+.timekeeping-search-btn:hover {
+  background: #1e293b;
+}
+
+.timekeeping-save-btn:hover {
+  background: #065f46;
+}
+
+.timekeeping-refresh-btn:disabled,
+.timekeeping-search-btn:disabled,
+.timekeeping-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.timekeeping-employee-card {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.timekeeping-employee-card div {
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timekeeping-employee-card span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.timekeeping-employee-card strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.timekeeping-form-card {
+  padding: 24px;
+}
+
+.timekeeping-section-title {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.timekeeping-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.note-field {
+  margin-top: 16px;
+}
+
+.timekeeping-actions-row {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.timekeeping-rule-note {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.timekeeping-success-message {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.timekeeping-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.timekeeping-summary-card {
+  padding: 20px;
+}
+
+.timekeeping-summary-card span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.timekeeping-summary-card strong {
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.timekeeping-summary-card.highlight {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+.timekeeping-summary-card.highlight span {
+  color: #cbd5e1;
+}
+
+.timekeeping-summary-card.highlight strong {
+  color: #ffffff;
+}
+
+.timekeeping-table-card {
+  padding: 22px;
+}
+
+.timekeeping-table-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timekeeping-table-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.timekeeping-table-header span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.timekeeping-table-wrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.timekeeping-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #334155;
+}
+
+.timekeeping-table thead {
+  background: #f8fafc;
+}
+
+.timekeeping-table th {
+  padding: 14px 16px;
+  text-align: left;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.timekeeping-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf2f7;
+  white-space: nowrap;
+}
+
+.timekeeping-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.attendance-status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.attendance-status.ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.attendance-status.leave {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.attendance-status.absent {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.timekeeping-empty-row {
+  text-align: center;
+  padding: 24px !important;
+  color: #64748b;
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .timekeeping-summary-grid {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
+  .timekeeping-form-grid,
+  .timekeeping-employee-card {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .timekeeping-header-card,
+  .timekeeping-filter-card,
+  .timekeeping-form-card,
+  .timekeeping-table-card,
+  .timekeeping-summary-card {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .timekeeping-header-card h2 {
+    font-size: 22px;
+  }
+
+  .timekeeping-field {
+    min-width: 100%;
+  }
+
+  .timekeeping-form-grid,
+  .timekeeping-employee-card,
+  .timekeeping-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .timekeeping-refresh-btn,
+  .timekeeping-search-btn,
+  .timekeeping-save-btn {
+    width: 100%;
+  }
+}

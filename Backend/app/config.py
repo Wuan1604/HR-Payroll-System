@@ -1,23 +1,27 @@
 import os
 from dotenv import load_dotenv
 
-# Load các biến từ file .env
 load_dotenv()
 
 class Config:
-    # 1. SQL Server - Lấy hoàn toàn từ ENV, nếu không có thì để chuỗi rỗng
-    SQL_SERVER_CONN = os.getenv('SQL_SERVER_CONN', "")
+    SQL_SERVER_CONN = os.getenv('SQL_SERVER_CONN', '')
 
-    # 2. MySQL - Tất cả các key đều lấy từ ENV
     MYSQL_CONFIG = {
-        'host':     os.getenv('MYSQL_HOST'),
-        'user':     os.getenv('MYSQL_USER'),
-        'password': os.getenv('MYSQL_PASSWORD'),
-        'database': os.getenv('MYSQL_DB'),
-      'port':     int(os.getenv('MYSQL_PORT'))
+        'host': os.getenv('MYSQL_HOST', 'localhost'),
+        'user': os.getenv('MYSQL_USER', 'root'),
+        'password': os.getenv('MYSQL_PASSWORD', ''),
+        'database': os.getenv('MYSQL_DB', 'payroll'),
+        'port': int(os.getenv('MYSQL_PORT', '3306')),
     }
 
-    # 3. Email & Security
-    SENDER_EMAIL = os.getenv('SENDER_EMAIL', "")
-    SENDER_PASSWORD = os.getenv('SENDER_PASSWORD', "")
+    AUTH_MYSQL_CONFIG = {
+        'host': os.getenv('AUTH_MYSQL_HOST', os.getenv('MYSQL_HOST', 'localhost')),
+        'user': os.getenv('AUTH_MYSQL_USER', os.getenv('MYSQL_USER', 'root')),
+        'password': os.getenv('AUTH_MYSQL_PASSWORD', os.getenv('MYSQL_PASSWORD', '')),
+        'database': os.getenv('AUTH_MYSQL_DB', 'hr_auth'),
+        'port': int(os.getenv('AUTH_MYSQL_PORT', os.getenv('MYSQL_PORT', '3306'))),
+    }
+
+    SENDER_EMAIL = os.getenv('SENDER_EMAIL', '')
+    SENDER_PASSWORD = os.getenv('SENDER_PASSWORD', '')
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev_default_key')

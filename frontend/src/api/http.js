@@ -1,14 +1,22 @@
+import { clearAuth, getToken } from '../utils/auth'
+
 export async function apiFetch(endpoint, options = {}) {
+  const token = getToken()
+  const headers = {
+    ...(options.headers || {}),
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   const res = await fetch(endpoint, {
     ...options,
     credentials: 'include',
-    headers: {
-      ...(options.headers || {}),
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    },
+    headers,
   })
 
-  // Backend Flask trả JSON/error message bằng nhiều dạng khác nhau.
   if (!res.ok) {
     let message = `HTTP ${res.status}`
     try {
@@ -18,20 +26,19 @@ export async function apiFetch(endpoint, options = {}) {
       try {
         const text = await res.text()
         message = text || message
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
+
+    if (res.status === 401) {
+      clearAuth()
+    }
+
     const err = new Error(message)
     err.status = res.status
     throw err
   }
 
-  // Một số endpoint có thể trả JSON hoặc không content.
   const contentType = res.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    return res.json()
-  }
+  if (contentType.includes('application/json')) return res.json()
   return res.text()
 }
-

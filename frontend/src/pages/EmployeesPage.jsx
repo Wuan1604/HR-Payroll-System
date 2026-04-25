@@ -3,8 +3,11 @@ import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getEmployees, deleteEmployee, updateEmployee } from '../api/humanApi'
 import '../styles/EmployeesPage.css'
+import { getRole } from '../utils/auth'
 
 export default function EmployeesPage() {
+  const role = getRole()
+  const canManageEmployees = role === 'Admin'
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
@@ -59,7 +62,7 @@ export default function EmployeesPage() {
       <div className="employees-header card">
         <div>
           <h2>Danh sách nhân viên</h2>
-          <p>Quản lý, chỉnh sửa và xóa thông tin nhân viên</p>
+          <p>{canManageEmployees ? 'Quản lý, chỉnh sửa và xóa thông tin nhân viên' : 'Xem danh sách nhân viên'}</p>
         </div>
 
         <button className="btn-refresh" onClick={load} disabled={loading}>
@@ -81,7 +84,7 @@ export default function EmployeesPage() {
                 <th>Phòng ban</th>
                 <th>Chức vụ</th>
                 <th>Trạng thái</th>
-                <th>Hành động</th>
+                {canManageEmployees ? <th>Hành động</th> : null}
               </tr>
             </thead>
 
@@ -96,22 +99,24 @@ export default function EmployeesPage() {
                   <td>
                     <span className="status-badge">{emp.Status}</span>
                   </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="btn-edit" onClick={() => handleEdit(emp)}>
-                        Sửa
-                      </button>
-                      <button className="btn-delete" onClick={() => handleDelete(emp.EmployeeID)}>
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
+                  {canManageEmployees ? (
+                    <td>
+                      <div className="action-buttons">
+                        <button className="btn-edit" onClick={() => handleEdit(emp)}>
+                          Sửa
+                        </button>
+                        <button className="btn-delete" onClick={() => handleDelete(emp.EmployeeID)}>
+                          Xóa
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
 
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="empty-row">
+                  <td colSpan={canManageEmployees ? 7 : 6} className="empty-row">
                     Không có dữ liệu nhân viên
                   </td>
                 </tr>
@@ -121,7 +126,7 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {editingEmployee && (
+      {canManageEmployees && editingEmployee && (
         <div className="modal-overlay">
           <div className="employee-modal">
             <div className="modal-header">

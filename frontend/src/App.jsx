@@ -1,4 +1,4 @@
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 
 import DashboardPage from './pages/DashboardPage'
@@ -13,220 +13,107 @@ import RequireAuth from './components/RequireAuth'
 import DepartmentPage from './pages/DepartmentPage'
 import PositionPage from './pages/PositionPage'
 import HistorySalariesPage from './pages/HistorySalariesPage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import UnauthorizedPage from './pages/UnauthorizedPage'
+import UserManagementPage from './pages/UserManagementPage'
+import { logout } from './api/authApi'
+import { clearAuth, getCurrentUser, getRole } from './utils/auth'
 
-function App() {
-  const linkClassName = ({ isActive }) =>
-    `nav-link${isActive ? ' nav-link--active' : ''}`
+const ADMIN = ['Admin']
+const ADMIN_MANAGER = ['Admin', 'Manager']
+const ALL_ROLES = ['Admin', 'Manager', 'Employee']
+
+function RoleLink({ to, children, roles }) {
+  const role = getRole()
+  if (roles?.length && !roles.includes(role)) return null
+  return <NavLink to={to} className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>{children}</NavLink>
+}
+
+function Sidebar() {
+  const navigate = useNavigate()
+  const user = getCurrentUser()
+  const role = user?.Role
+
+  async function handleLogout() {
+    try { await logout() } catch {}
+    clearAuth()
+    navigate('/login', { replace: true })
+  }
+
+  if (!user) return null
 
   return (
-    <BrowserRouter>
-      <div className="layout">
-        <aside className="sidebar">
-          <div className="sidebar__brand">HR & Payroll</div>
-          <nav className="sidebar__nav">
-            <NavLink to="/" className={linkClassName}>
-              Tổng quan
-            </NavLink>
-            <div className="sidebar__section">Quản lý Nhân sự</div>
-            <NavLink to="/employees-page" className={linkClassName}>
-              Danh sách nhân viên
-            </NavLink>
-            <NavLink to="/add-employee" className={linkClassName}>
-              Thêm nhân viên
-            </NavLink>
-            <NavLink to="/show-department" className={linkClassName}>
-              Phòng ban 
-            </NavLink>
-            <NavLink to="/show-human" className={linkClassName}>
-              Chức vụ
-            </NavLink>
-
-            <div className="sidebar__section">Quản lý Tiền lương</div>
-            <NavLink to="/show-salaries" className={linkClassName}>
-              Bảng lương
-            </NavLink>
-            <NavLink to="/update-salary" className={linkClassName}>
-              Tạo bảng lương
-            </NavLink>
-            <NavLink to="/history-salaries" className={linkClassName}>
-              Lịch sử lương
-            </NavLink>
-            
-            <NavLink to="/report-salaries" className={linkClassName}>
-              Báo cáo lương (chưa có)
-            </NavLink>
-            <NavLink to="/timekeeping" className={linkClassName}>
-              Chấm công
-            </NavLink>
-            <NavLink to="/send-salary-emails" className={linkClassName}>
-              Gửi email phiếu lương
-            </NavLink>
-
-            <div className="sidebar__section">Alerts & Reports</div>
-            <NavLink to="/employee-anniversary-warning" className={linkClassName}>
-              Kỷ niệm thâm niên (chưa có)
-            </NavLink>
-            <NavLink to="/leave-days-warning" className={linkClassName}>
-              Nghỉ phép quá hạn (chưa có)
-            </NavLink>
-            <NavLink to="/salary-alerts" className={linkClassName}>
-              Cảnh báo biến động lương (chưa có)
-            </NavLink>
-            <NavLink to="/report-human-full" className={linkClassName}>
-              Báo cáo thống kê (chưa có)
-            </NavLink>
-          </nav>
-        </aside>
-
-        <main className="content">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <DashboardPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/employees-page"
-              element={
-                <RequireAuth>
-                  <EmployeesPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/add-employee"
-              element={
-                <RequireAuth>
-                  <AddEmployeePage />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/show-salaries"
-              element={
-                <RequireAuth>
-                  <PayrollSalariesPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/timekeeping"
-              element={
-                <RequireAuth>
-                  <TimekeepingPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/update-salary"
-              element={
-                <RequireAuth>
-                  <UpdateSalaryPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/send-salary-emails"
-              element={
-                <RequireAuth>
-                  <SendSalaryEmailsPage />
-                </RequireAuth>
-              }
-            />
-
-            {/* Cập nhật route Phòng ban: Thay NotImplemented bằng DepartmentPage */}
-            <Route
-              path="/show-department"
-              element={
-                <RequireAuth>
-                  <DepartmentPage />
-                </RequireAuth>
-              }
-            />
-
-            {/* Cập nhật route Chức vụ: Thay NotImplemented bằng PositionPage */}
-            <Route
-              path="/show-human"
-              element={
-                <RequireAuth>
-                  <PositionPage />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/history-salaries"
-              element={
-                <RequireAuth>
-                  <HistorySalariesPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/salaries-month"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/salaries/month/1/2026" />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/report-salaries"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/report-salaries" />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/employee-anniversary-warning"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/employee-anniversary-warning" />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/leave-days-warning"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/leave-days-warning" />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/salary-alerts"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/payroll/salary-alerts" />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/report-human-full"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="/api/human/report-human" />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="*"
-              element={
-                <RequireAuth>
-                  <NotImplementedPage apiPath="N/A" />
-                </RequireAuth>
-              }
-            />
-          </Routes>
-        </main>
+    <aside className="sidebar">
+      <div className="sidebar__brand">HR & Payroll</div>
+      <div className="sidebar__user">
+        <strong>{user.FullName}</strong>
+        <span>{role}</span>
       </div>
+
+      <nav className="sidebar__nav">
+        <RoleLink to="/" roles={ALL_ROLES}>{role === 'Employee' ? 'Tổng quan cá nhân' : 'Tổng quan'}</RoleLink>
+
+        {role === 'Admin' || role === 'Manager' ? <div className="sidebar__section">Quản lý Nhân sự</div> : null}
+        <RoleLink to="/employees-page" roles={ADMIN_MANAGER}>Danh sách nhân viên</RoleLink>
+        <RoleLink to="/add-employee" roles={ADMIN}>Thêm nhân viên</RoleLink>
+        <RoleLink to="/show-department" roles={ADMIN}>Phòng ban</RoleLink>
+        <RoleLink to="/show-human" roles={ADMIN}>Chức vụ</RoleLink>
+
+        <div className="sidebar__section">Quản lý Tiền lương</div>
+        <RoleLink to="/show-salaries" roles={ADMIN_MANAGER}>Bảng lương</RoleLink>
+        <RoleLink to="/show-salaries" roles={['Employee']}>Lương của tôi</RoleLink>
+        <RoleLink to="/update-salary" roles={ADMIN_MANAGER}>Tạo bảng lương</RoleLink>
+        <RoleLink to="/history-salaries" roles={ADMIN_MANAGER}>Báo cáo và lịch sử lương</RoleLink>
+        <RoleLink to="/history-salaries" roles={['Employee']}>Lịch sử lương của tôi</RoleLink>
+        <RoleLink to="/timekeeping" roles={ADMIN_MANAGER}>Chấm công</RoleLink>
+        <RoleLink to="/timekeeping" roles={['Employee']}>Chấm công của tôi</RoleLink>
+        <RoleLink to="/send-salary-emails" roles={ADMIN_MANAGER}>Gửi email phiếu lương</RoleLink>
+
+        {role === 'Admin' ? <div className="sidebar__section">Hệ thống</div> : null}
+        <RoleLink to="/users" roles={ADMIN}>Quản lý tài khoản</RoleLink>
+      </nav>
+
+      <button className="sidebar__logout" onClick={handleLogout}>Đăng xuất</button>
+    </aside>
+  )
+}
+
+function ProtectedLayout() {
+  return (
+    <div className="layout">
+      <Sidebar />
+      <main className="content">
+        <Routes>
+          <Route path="/" element={<RequireAuth roles={ALL_ROLES}><DashboardPage /></RequireAuth>} />
+          <Route path="/employees-page" element={<RequireAuth roles={ADMIN_MANAGER}><EmployeesPage /></RequireAuth>} />
+          <Route path="/add-employee" element={<RequireAuth roles={ADMIN}><AddEmployeePage /></RequireAuth>} />
+          <Route path="/show-department" element={<RequireAuth roles={ADMIN}><DepartmentPage /></RequireAuth>} />
+          <Route path="/show-human" element={<RequireAuth roles={ADMIN}><PositionPage /></RequireAuth>} />
+
+          <Route path="/show-salaries" element={<RequireAuth roles={ALL_ROLES}><PayrollSalariesPage /></RequireAuth>} />
+          <Route path="/update-salary" element={<RequireAuth roles={ADMIN_MANAGER}><UpdateSalaryPage /></RequireAuth>} />
+          <Route path="/history-salaries" element={<RequireAuth roles={ALL_ROLES}><HistorySalariesPage /></RequireAuth>} />
+          <Route path="/timekeeping" element={<RequireAuth roles={ALL_ROLES}><TimekeepingPage /></RequireAuth>} />
+          <Route path="/send-salary-emails" element={<RequireAuth roles={ADMIN_MANAGER}><SendSalaryEmailsPage /></RequireAuth>} />
+          <Route path="/users" element={<RequireAuth roles={ADMIN}><UserManagementPage /></RequireAuth>} />
+
+          <Route path="/unauthorized" element={<RequireAuth roles={ALL_ROLES}><UnauthorizedPage /></RequireAuth>} />
+          <Route path="*" element={<RequireAuth roles={ALL_ROLES}><NotImplementedPage apiPath="N/A" /></RequireAuth>} />
+        </Routes>
+      </main>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/*" element={<ProtectedLayout />} />
+      </Routes>
     </BrowserRouter>
   )
 }
