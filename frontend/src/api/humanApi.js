@@ -99,3 +99,18 @@ export function getDepartments() {
 export function getPositions() {
     return apiFetch('/api/human/positions')
 }
+
+// ==========================================
+// 5. THÔNG TIN CÁ NHÂN EMPLOYEE
+// ==========================================
+
+export function getMyProfile() {
+    return apiFetch('/api/human/my-profile')
+}
+
+export function updateMyProfile(payload) {
+    return apiFetch('/api/human/my-profile', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    })
+}

@@ -118,3 +118,15 @@ LƯU Ý: Khi chạy sẽ  có  tự sinh ra các file .pyc là file rác
 các khắc phục 
 Bật CMD quyền Admin  và chạy lệch setx PYTHONDONTWRITEBYTECODE 1
 sau đó khởi động lại máy 
+tài khoản test
+Admin:
+username: admin
+password: admin123
+
+Manager:
+username: manager
+password: manager123
+
+Employee:
+username: employee
+password: employee123

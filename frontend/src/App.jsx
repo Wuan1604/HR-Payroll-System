@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import UserManagementPage from './pages/UserManagementPage'
+import EmployeeProfilePage from './pages/EmployeeProfilePage'
 import { logout } from './api/authApi'
 import { clearAuth, getCurrentUser, getRole } from './utils/auth'
 
@@ -52,7 +53,8 @@ function Sidebar() {
       </div>
 
       <nav className="sidebar__nav">
-        <RoleLink to="/" roles={ALL_ROLES}>{role === 'Employee' ? 'Tổng quan cá nhân' : 'Tổng quan'}</RoleLink>
+        <RoleLink to="/" roles={ADMIN_MANAGER}>Tổng quan</RoleLink>
+        <RoleLink to="/my-profile" roles={['Employee']}>Thông tin cá nhân</RoleLink>
 
         {role === 'Admin' || role === 'Manager' ? <div className="sidebar__section">Quản lý Nhân sự</div> : null}
         <RoleLink to="/employees-page" roles={ADMIN_MANAGER}>Danh sách nhân viên</RoleLink>
@@ -85,7 +87,8 @@ function ProtectedLayout() {
       <Sidebar />
       <main className="content">
         <Routes>
-          <Route path="/" element={<RequireAuth roles={ALL_ROLES}><DashboardPage /></RequireAuth>} />
+          <Route path="/" element={<RequireAuth roles={ADMIN_MANAGER}><DashboardPage /></RequireAuth>} />
+          <Route path="/my-profile" element={<RequireAuth roles={['Employee']}><EmployeeProfilePage /></RequireAuth>} />
           <Route path="/employees-page" element={<RequireAuth roles={ADMIN_MANAGER}><EmployeesPage /></RequireAuth>} />
           <Route path="/add-employee" element={<RequireAuth roles={ADMIN}><AddEmployeePage /></RequireAuth>} />
           <Route path="/show-department" element={<RequireAuth roles={ADMIN}><DepartmentPage /></RequireAuth>} />

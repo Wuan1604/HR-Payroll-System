@@ -1,0 +1,240 @@
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-header-card,
+.profile-info-card,
+.profile-form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.profile-header-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.profile-header-card h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.profile-header-card p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.profile-refresh-btn,
+.profile-save-btn {
+  border: none;
+  outline: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.profile-refresh-btn:hover,
+.profile-save-btn:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.profile-refresh-btn:disabled,
+.profile-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.profile-content-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.profile-info-card,
+.profile-form-card {
+  padding: 24px;
+}
+
+.profile-info-card h3,
+.profile-form-card h3 {
+  margin: 0 0 18px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 900;
+  margin-bottom: 14px;
+}
+
+.profile-name {
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.profile-role {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-info-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-info-list div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.profile-info-list span,
+.profile-field span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-info-list strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-field-full {
+  grid-column: 1 / -1;
+}
+
+.profile-field input,
+.profile-field select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 0 13px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.profile-field input:focus,
+.profile-field select:focus {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+}
+
+.profile-note {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-success-message {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .profile-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-header-card,
+  .profile-info-card,
+  .profile-form-card {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .profile-header-card h2 {
+    font-size: 22px;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-refresh-btn,
+  .profile-save-btn {
+    width: 100%;
+  }
+
+  .profile-actions {
+    justify-content: stretch;
+  }
+}

@@ -10,7 +10,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  if (getCurrentUser()) return <Navigate to="/" replace />
+  const currentUser = getCurrentUser()
+  if (currentUser) {
+    return <Navigate to={currentUser.Role === 'Employee' ? '/my-profile' : '/'} replace />
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -20,7 +23,7 @@ export default function LoginPage() {
     try {
       const res = await login({ email: form.account, username: form.account, password: form.password })
       saveAuth(res.token, res.user)
-      navigate('/', { replace: true })
+      navigate(res.user?.Role === 'Employee' ? '/my-profile' : '/', { replace: true })
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại')
     } finally {
