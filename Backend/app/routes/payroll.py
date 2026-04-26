@@ -7,6 +7,7 @@ import calendar
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
 
 payroll_bp = Blueprint('payroll', __name__)
 
@@ -15,22 +16,52 @@ payroll_bp = Blueprint('payroll', __name__)
 # COMMON HELPERS
 # =========================================================
 def send_email_logic(to_email, subject, content):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = Config.SENDER_EMAIL
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(content, 'html'))
+    """Gửi email và trả về (thành_công, lỗi).
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+    Gmail App Password thường được hiển thị có khoảng trắng.
+    Khi đăng nhập SMTP cần bỏ khoảng trắng để tránh lỗi xác thực.
+    """
+    server = None
+    try:
+        sender_email = (Config.SENDER_EMAIL or '').strip()
+        sender_password = (Config.SENDER_PASSWORD or '').replace(' ', '').strip()
+        receiver_email = (to_email or '').strip()
+
+        if not sender_email:
+            return False, 'Chưa cấu hình SENDER_EMAIL trong file .env'
+        if not sender_password:
+            return False, 'Chưa cấu hình SENDER_PASSWORD trong file .env'
+        if not receiver_email:
+            return False, 'Người nhận chưa có email'
+
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+        msg['Subject'] = str(Header(subject, 'utf-8'))
+        msg.attach(MIMEText(content, 'html', 'utf-8'))
+
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=30)
+        server.ehlo()
         server.starttls()
-        server.login(Config.SENDER_EMAIL, Config.SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
+        server.ehlo()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, [receiver_email], msg.as_string())
+        return True, None
+
+    except smtplib.SMTPAuthenticationError:
+        error = 'Không đăng nhập được Gmail SMTP. Kiểm tra SENDER_EMAIL và App Password trong .env'
+        print(f"Lỗi gửi mail: {error}")
+        return False, error
     except Exception as e:
-        print(f"Lỗi gửi mail: {e}")
-        return False
+        error = str(e)
+        print(f"Lỗi gửi mail tới {to_email}: {error}")
+        return False, error
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 
 def ensure_attendance_details_table(cursor):
@@ -572,9 +603,120 @@ def update_salary():
 
 
 # =========================================================
-# 4. GỬI EMAIL PHIẾU LƯƠNG
+# 4. GỬI EMAIL THÔNG TIN NHÂN VIÊN / CHẤM CÔNG / PHIẾU LƯƠNG
 # =========================================================
-@payroll_bp.route('/send-salary-emails', methods=['GET'])
+def format_vnd(value):
+    try:
+        return f"{float(value or 0):,.0f}".replace(',', '.') + ' VNĐ'
+    except Exception:
+        return '0 VNĐ'
+
+
+def normalize_month_value(month_value):
+    if not month_value:
+        return datetime.now().strftime('%Y-%m')
+    return str(month_value)[:7]
+
+
+def salary_month_date(month_value):
+    return normalize_month_value(month_value) + '-01'
+
+
+def build_employee_email_html(employee, salary=None, attendance=None, options=None, month_value=None):
+    options = options or {}
+    month_text = normalize_month_value(month_value)
+
+    html = f'''
+    <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.5;">
+        <h2 style="margin-bottom: 4px;">HR & Payroll</h2>
+        <p style="margin-top: 0; color: #64748b;">Thông tin nhân viên tháng {month_text}</p>
+        <p>Chào <b>{employee.get('FullName') or 'nhân viên'}</b>,</p>
+    '''
+
+    if options.get('sendProfile'):
+        html += f'''
+        <h3 style="margin-top: 24px;">1. Thông tin cá nhân</h3>
+        <table cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #e5e7eb;">
+            <tr><td style="border:1px solid #e5e7eb;"><b>Mã nhân viên</b></td><td style="border:1px solid #e5e7eb;">{employee.get('EmployeeID') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Họ và tên</b></td><td style="border:1px solid #e5e7eb;">{employee.get('FullName') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Email</b></td><td style="border:1px solid #e5e7eb;">{employee.get('Email') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Ngày sinh</b></td><td style="border:1px solid #e5e7eb;">{employee.get('DateOfBirth') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Giới tính</b></td><td style="border:1px solid #e5e7eb;">{employee.get('Gender') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Số điện thoại</b></td><td style="border:1px solid #e5e7eb;">{employee.get('PhoneNumber') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Ngày vào làm</b></td><td style="border:1px solid #e5e7eb;">{employee.get('HireDate') or ''}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Phòng ban</b></td><td style="border:1px solid #e5e7eb;">{employee.get('DepartmentName') or 'Chưa có'}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Chức vụ</b></td><td style="border:1px solid #e5e7eb;">{employee.get('PositionName') or 'Chưa có'}</td></tr>
+            <tr><td style="border:1px solid #e5e7eb;"><b>Trạng thái</b></td><td style="border:1px solid #e5e7eb;">{employee.get('Status') or 'Chưa có'}</td></tr>
+        </table>
+        '''
+
+    if options.get('sendAttendance'):
+        if attendance:
+            html += f'''
+            <h3 style="margin-top: 24px;">2. Bảng chấm công tháng {month_text}</h3>
+            <table cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #e5e7eb;">
+                <tr><td style="border:1px solid #e5e7eb;"><b>Công chuẩn</b></td><td style="border:1px solid #e5e7eb;">{attendance.get('standardWorkDays')}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Công thực tế</b></td><td style="border:1px solid #e5e7eb;">{attendance.get('workDays')}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Tổng giờ làm</b></td><td style="border:1px solid #e5e7eb;">{attendance.get('totalHours')} giờ</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Nghỉ phép</b></td><td style="border:1px solid #e5e7eb;">{attendance.get('leaveDays')}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Ngày nghỉ/thiếu ghi nhận</b></td><td style="border:1px solid #e5e7eb;">{attendance.get('absentDays')}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Khấu trừ đề xuất</b></td><td style="border:1px solid #e5e7eb;">{format_vnd(attendance.get('suggestedDeductions'))}</td></tr>
+            </table>
+            '''
+            details = attendance.get('details') or []
+            if details:
+                html += '''
+                <table cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #e5e7eb; margin-top: 10px; font-size: 13px;">
+                    <thead>
+                        <tr style="background:#f8fafc;">
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Ngày</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Giờ vào</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Giờ ra</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Tổng giờ</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Công</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Trạng thái</th>
+                            <th style="border:1px solid #e5e7eb; text-align:left;">Ghi chú</th>
+                        </tr>
+                    </thead><tbody>
+                '''
+                for d in details:
+                    html += f'''
+                    <tr>
+                        <td style="border:1px solid #e5e7eb;">{d.get('WorkDate') or ''}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('CheckIn') or ''}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('CheckOut') or ''}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('TotalHours') or 0}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('WorkUnit') or 0}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('Status') or ''}</td>
+                        <td style="border:1px solid #e5e7eb;">{d.get('Note') or ''}</td>
+                    </tr>
+                    '''
+                html += '</tbody></table>'
+        else:
+            html += f'<h3 style="margin-top: 24px;">2. Bảng chấm công tháng {month_text}</h3><p>Chưa có dữ liệu chấm công.</p>'
+
+    if options.get('sendSalary'):
+        if salary:
+            html += f'''
+            <h3 style="margin-top: 24px;">3. Bảng lương tháng {month_text}</h3>
+            <table cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #e5e7eb;">
+                <tr><td style="border:1px solid #e5e7eb;"><b>Lương cơ bản</b></td><td style="border:1px solid #e5e7eb;">{format_vnd(salary.get('BaseSalary'))}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Thưởng</b></td><td style="border:1px solid #e5e7eb;">{format_vnd(salary.get('Bonus'))}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Khấu trừ</b></td><td style="border:1px solid #e5e7eb;">{format_vnd(salary.get('Deductions'))}</td></tr>
+                <tr><td style="border:1px solid #e5e7eb;"><b>Lương thực nhận</b></td><td style="border:1px solid #e5e7eb;"><b style="color:#047857;">{format_vnd(salary.get('NetSalary'))}</b></td></tr>
+            </table>
+            '''
+        else:
+            html += f'<h3 style="margin-top: 24px;">3. Bảng lương tháng {month_text}</h3><p>Chưa có dữ liệu lương.</p>'
+
+    html += '''
+        <p style="margin-top: 24px; color: #64748b;">Email này được gửi tự động từ hệ thống HR & Payroll.</p>
+    </div>
+    '''
+    return html
+
+
+@payroll_bp.route('/send-salary-emails', methods=['GET', 'POST'])
 @roles_required('Admin', 'Manager')
 def send_emails():
     my_conn = get_mysql_connection()
@@ -583,28 +725,163 @@ def send_emails():
         return jsonify({"error": "Lỗi kết nối cơ sở dữ liệu"}), 500
 
     try:
-        my_cursor = my_conn.cursor(dictionary=True)
-        my_cursor.execute("SELECT EmployeeID, NetSalary, SalaryMonth FROM salaries ORDER BY SalaryMonth DESC")
-        salaries = my_cursor.fetchall()
+        data = (request.json or {}) if request.method == 'POST' else {}
+        month_value = normalize_month_value(data.get('month'))
+        selected_ids = data.get('employeeIds') or []
+        select_all = bool(data.get('selectAll')) or request.method == 'GET'
+
+        options = {
+            'sendProfile': bool(data.get('sendProfile')) or request.method == 'GET',
+            'sendAttendance': bool(data.get('sendAttendance')),
+            'sendSalary': bool(data.get('sendSalary')) or request.method == 'GET',
+        }
+
+        if not any(options.values()):
+            return jsonify({"error": "Vui lòng chọn ít nhất một nội dung email cần gửi"}), 400
 
         sql_cursor = sql_conn.cursor()
-        sql_cursor.execute("SELECT EmployeeID, FullName, Email FROM Employees")
-        emps = {r[0]: {"name": r[1], "email": r[2]} for r in sql_cursor.fetchall()}
+        if select_all:
+            sql_cursor.execute("""
+                SELECT e.EmployeeID, e.FullName, e.DateOfBirth, e.Gender, e.PhoneNumber, e.Email, e.HireDate,
+                       e.DepartmentID, e.PositionID, e.Status,
+                       d.DepartmentName, p.PositionName
+                FROM Employees e
+                LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+                LEFT JOIN Positions p ON e.PositionID = p.PositionID
+                WHERE e.Email IS NOT NULL AND LTRIM(RTRIM(e.Email)) <> ''
+                ORDER BY e.EmployeeID
+            """)
+        else:
+            ids = [int(x) for x in selected_ids if str(x).strip().isdigit()]
+            if not ids:
+                return jsonify({"error": "Vui lòng chọn ít nhất một nhân viên"}), 400
+            placeholders = ','.join(['?'] * len(ids))
+            sql_cursor.execute(f"""
+                SELECT e.EmployeeID, e.FullName, e.DateOfBirth, e.Gender, e.PhoneNumber, e.Email, e.HireDate,
+                       e.DepartmentID, e.PositionID, e.Status,
+                       d.DepartmentName, p.PositionName
+                FROM Employees e
+                LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+                LEFT JOIN Positions p ON e.PositionID = p.PositionID
+                WHERE e.EmployeeID IN ({placeholders})
+                ORDER BY e.EmployeeID
+            """, tuple(ids))
+
+        employee_rows = sql_cursor.fetchall()
+        employees = []
+        for r in employee_rows:
+            employees.append({
+                'EmployeeID': int(r[0]),
+                'FullName': r[1],
+                'DateOfBirth': str(r[2])[:10] if r[2] else None,
+                'Gender': r[3],
+                'PhoneNumber': r[4],
+                'Email': r[5],
+                'HireDate': str(r[6])[:10] if r[6] else None,
+                'DepartmentID': r[7],
+                'PositionID': r[8],
+                'Status': r[9],
+                'DepartmentName': r[10],
+                'PositionName': r[11],
+            })
+
+        if not employees:
+            return jsonify({"error": "Không tìm thấy nhân viên phù hợp để gửi email"}), 404
+
+        employee_ids = [e['EmployeeID'] for e in employees]
+        my_cursor = my_conn.cursor(dictionary=True)
+
+        salaries_by_employee = {}
+        if options.get('sendSalary'):
+            placeholders = ','.join(['%s'] * len(employee_ids))
+            my_cursor.execute(f"""
+                SELECT SalaryID, EmployeeID, SalaryMonth, BaseSalary, Bonus, Deductions, NetSalary, CreatedAt
+                FROM salaries
+                WHERE EmployeeID IN ({placeholders}) AND SalaryMonth = %s
+            """, tuple(employee_ids + [salary_month_date(month_value)]))
+            for s in my_cursor.fetchall():
+                salaries_by_employee[int(s['EmployeeID'])] = s
+
+        attendance_by_employee = {}
+        if options.get('sendAttendance'):
+            ensure_attendance_details_table(my_cursor)
+            start, end = month_range(month_value)
+            placeholders = ','.join(['%s'] * len(employee_ids))
+            my_cursor.execute(f"""
+                SELECT DetailID, EmployeeID, WorkDate, CheckIn, CheckOut, TotalHours,
+                       WorkUnit, Status, Note, CreatedAt, UpdatedAt
+                FROM attendance_details
+                WHERE EmployeeID IN ({placeholders}) AND WorkDate BETWEEN %s AND %s
+                ORDER BY WorkDate DESC
+            """, tuple(employee_ids + [start, end]))
+            grouped = {emp_id: [] for emp_id in employee_ids}
+            for row in my_cursor.fetchall():
+                grouped.setdefault(int(row['EmployeeID']), []).append(row)
+
+            for emp in employees:
+                base_salary = 0
+                salary_row = salaries_by_employee.get(emp['EmployeeID'])
+                if salary_row:
+                    base_salary = salary_row.get('BaseSalary') or 0
+                attendance_by_employee[emp['EmployeeID']] = build_attendance_summary(
+                    grouped.get(emp['EmployeeID'], []),
+                    month_value,
+                    base_salary,
+                )
 
         sent_count = 0
-        for s in salaries:
-            emp = emps.get(s['EmployeeID'])
-            if emp and emp['email'] and float(s['NetSalary'] or 0) > 0:
-                formatted_salary = "{:,.0f}".format(float(s['NetSalary']))
-                salary_month = str(s['SalaryMonth'])
-                html = f"""
-                    <h3>Chào {emp['name']},</h3>
-                    <p>Lương tháng {salary_month} của bạn là:</p>
-                    <h2>{formatted_salary} VND</h2>
-                """
-                if send_email_logic(emp['email'], "Phiếu lương", html):
-                    sent_count += 1
-        return jsonify({"message": f"Đã gửi {sent_count} email"}), 200
+        failed = []
+        skipped = []
+        results = []
+        for emp in employees:
+            email = (emp.get('Email') or '').strip()
+            if not email:
+                skipped.append({
+                    'EmployeeID': emp.get('EmployeeID'),
+                    'FullName': emp.get('FullName'),
+                    'reason': 'Nhân viên chưa có email',
+                })
+                continue
+
+            salary = salaries_by_employee.get(emp['EmployeeID'])
+            attendance = attendance_by_employee.get(emp['EmployeeID'])
+            subject_parts = []
+            if options.get('sendProfile'):
+                subject_parts.append('thông tin cá nhân')
+            if options.get('sendAttendance'):
+                subject_parts.append('chấm công')
+            if options.get('sendSalary'):
+                subject_parts.append('bảng lương')
+            subject = 'HR & Payroll - ' + ', '.join(subject_parts).capitalize() + f' tháng {month_value}'
+            html = build_employee_email_html(emp, salary, attendance, options, month_value)
+
+            success, send_error = send_email_logic(email, subject, html)
+            if success:
+                sent_count += 1
+                results.append({
+                    'EmployeeID': emp.get('EmployeeID'),
+                    'FullName': emp.get('FullName'),
+                    'Email': email,
+                    'status': 'Đã gửi',
+                })
+            else:
+                failed.append({
+                    'EmployeeID': emp.get('EmployeeID'),
+                    'FullName': emp.get('FullName'),
+                    'Email': email,
+                    'reason': send_error or 'Gửi email thất bại',
+                })
+
+        return jsonify({
+            'message': f'Đã gửi {sent_count}/{len(employees)} email',
+            'sent_count': sent_count,
+            'total_selected': len(employees),
+            'month': month_value,
+            'options': options,
+            'results': results,
+            'failed': failed,
+            'skipped': skipped,
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

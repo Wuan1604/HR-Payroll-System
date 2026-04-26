@@ -48,8 +48,15 @@ export function updateSalary(payload) {
     })
 }
 
-export function sendSalaryEmails() {
-    return apiFetch('/api/payroll/send-salary-emails')
+export function sendSalaryEmails(payload = null) {
+    if (!payload) {
+        return apiFetch('/api/payroll/send-salary-emails')
+    }
+
+    return apiFetch('/api/payroll/send-salary-emails', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    })
 }
 
 export function historySalaries(employeeId) {

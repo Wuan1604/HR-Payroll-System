@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { createUser, deleteUser, getUsers, updateUser } from '../api/authApi'
+import { getEmployees } from '../api/humanApi'
 import '../styles/UserManagementPage.css'
 
 const emptyForm = {
@@ -15,20 +16,31 @@ const emptyForm = {
   Status: 'Active',
 }
 
+function makeUsernameFromEmail(email) {
+  return String(email || '').split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase()
+}
+
 export default function UserManagementPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [users, setUsers] = useState([])
+  const [employees, setEmployees] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [message, setMessage] = useState('')
 
   async function load() {
     setLoading(true)
     setError(null)
+
     try {
-      const res = await getUsers()
-      setUsers(Array.isArray(res) ? res : [])
+      const [usersRes, employeesRes] = await Promise.all([
+        getUsers(),
+        getEmployees(),
+      ])
+
+      setUsers(Array.isArray(usersRes) ? usersRes : [])
+      setEmployees(Array.isArray(employeesRes?.employees) ? employeesRes.employees : [])
     } catch (e) {
       setError(e)
     } finally {
@@ -40,6 +52,24 @@ export default function UserManagementPage() {
 
   function handleChange(e) {
     const { name, value } = e.target
+
+    if (name === 'EmployeeID') {
+      const selectedEmployee = employees.find(
+        (emp) => String(emp.EmployeeID) === String(value)
+      )
+
+      setForm((prev) => ({
+        ...prev,
+        EmployeeID: value,
+        FullName: selectedEmployee?.FullName || prev.FullName,
+        Email: selectedEmployee?.Email || prev.Email,
+        Username: prev.Username || makeUsernameFromEmail(selectedEmployee?.Email),
+      }))
+
+      setMessage('')
+      return
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }))
     setMessage('')
   }
@@ -73,6 +103,7 @@ export default function UserManagementPage() {
         RoleName: form.RoleName,
         Status: form.Status,
       }
+
       if (form.Password) payload.Password = form.Password
 
       if (form.UserID) {
@@ -94,6 +125,7 @@ export default function UserManagementPage() {
 
   async function handleDelete(userId) {
     if (!window.confirm('Bạn có chắc muốn xóa tài khoản này không?')) return
+
     try {
       await deleteUser(userId)
       await load()
@@ -119,35 +151,138 @@ export default function UserManagementPage() {
         <>
           <form className="users-form-card" onSubmit={handleSubmit}>
             <h3>{form.UserID ? 'Cập nhật tài khoản' : 'Tạo tài khoản mới'}</h3>
+
             <div className="users-form-grid">
-              <label><span>EmployeeID</span><input name="EmployeeID" value={form.EmployeeID} onChange={handleChange} placeholder="Có thể để trống" /></label>
-              <label><span>Họ tên</span><input name="FullName" value={form.FullName} onChange={handleChange} required /></label>
-              <label><span>Email</span><input name="Email" value={form.Email} onChange={handleChange} required /></label>
-              <label><span>Username</span><input name="Username" value={form.Username} onChange={handleChange} required /></label>
-              <label><span>Mật khẩu</span><input name="Password" type="password" value={form.Password} onChange={handleChange} placeholder={form.UserID ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'} required={!form.UserID} /></label>
-              <label><span>Quyền</span><select name="RoleName" value={form.RoleName} onChange={handleChange}><option>Admin</option><option>Manager</option><option>Employee</option></select></label>
-              <label><span>Trạng thái</span><select name="Status" value={form.Status} onChange={handleChange}><option>Active</option><option>Locked</option><option>Inactive</option></select></label>
+              <label>
+                <span>Nhân viên liên kết</span>
+                <select name="EmployeeID" value={form.EmployeeID} onChange={handleChange}>
+                  <option value="">Không liên kết nhân viên</option>
+                  {employees.map((emp) => (
+                    <option key={emp.EmployeeID} value={emp.EmployeeID}>
+                      {emp.EmployeeID} - {emp.FullName} {emp.Email ? `(${emp.Email})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Họ tên</span>
+                <input name="FullName" value={form.FullName} onChange={handleChange} required />
+              </label>
+
+              <label>
+                <span>Email</span>
+                <input name="Email" value={form.Email} onChange={handleChange} required />
+              </label>
+
+              <label>
+                <span>Username</span>
+                <input name="Username" value={form.Username} onChange={handleChange} required />
+              </label>
+
+              <label>
+                <span>Mật khẩu</span>
+                <input
+                  name="Password"
+                  type="password"
+                  value={form.Password}
+                  onChange={handleChange}
+                  placeholder={form.UserID ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
+                  required={!form.UserID}
+                />
+              </label>
+
+              <label>
+                <span>Quyền</span>
+                <select name="RoleName" value={form.RoleName} onChange={handleChange}>
+                  <option>Admin</option>
+                  <option>Manager</option>
+                  <option>Employee</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Trạng thái</span>
+                <select name="Status" value={form.Status} onChange={handleChange}>
+                  <option>Active</option>
+                  <option>Locked</option>
+                  <option>Inactive</option>
+                </select>
+              </label>
             </div>
+
             <div className="users-form-actions">
-              <button className="btn" type="submit" disabled={saving}>{saving ? 'Đang lưu...' : form.UserID ? 'Lưu thay đổi' : 'Tạo tài khoản'}</button>
-              {form.UserID ? <button type="button" className="btn-secondary" onClick={() => setForm(emptyForm)}>Hủy sửa</button> : null}
+              <button className="btn" type="submit" disabled={saving}>
+                {saving ? 'Đang lưu...' : form.UserID ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+              </button>
+
+              {form.UserID ? (
+                <button type="button" className="btn-secondary" onClick={() => setForm(emptyForm)}>
+                  Hủy sửa
+                </button>
+              ) : null}
             </div>
+
             {message ? <div className="users-success">{message}</div> : null}
           </form>
 
           <div className="users-table-card">
-            <div className="users-table-header"><h3>Danh sách tài khoản</h3><span>{users.length} tài khoản</span></div>
+            <div className="users-table-header">
+              <h3>Danh sách tài khoản</h3>
+              <span>{users.length} tài khoản</span>
+            </div>
+
             <div className="users-table-wrapper">
               <table className="users-table">
-                <thead><tr><th>ID</th><th>EmployeeID</th><th>Họ tên</th><th>Email</th><th>Username</th><th>Quyền</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th><th>Hành động</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Nhân viên liên kết</th>
+                    <th>Họ tên</th>
+                    <th>Email</th>
+                    <th>Username</th>
+                    <th>Quyền</th>
+                    <th>Trạng thái</th>
+                    <th>Đăng nhập gần nhất</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+
                 <tbody>
-                  {users.map((u) => (
-                    <tr key={u.UserID}>
-                      <td>{u.UserID}</td><td>{u.EmployeeID || '-'}</td><td>{u.FullName}</td><td>{u.Email}</td><td>{u.Username}</td><td><b>{u.RoleName}</b></td><td>{u.Status}</td><td>{u.LastLogin || 'Chưa có'}</td>
-                      <td><div className="users-actions"><button onClick={() => editUser(u)}>Sửa</button><button className="danger" onClick={() => handleDelete(u.UserID)}>Xóa</button></div></td>
+                  {users.map((u, index) => {
+                    const linkedEmployee = employees.find(
+                      (emp) => String(emp.EmployeeID) === String(u.EmployeeID)
+                    )
+
+                    return (
+                      <tr key={u.UserID}>
+                        <td>{index + 1}</td>
+                        <td>
+                          {linkedEmployee
+                            ? `${linkedEmployee.EmployeeID} - ${linkedEmployee.FullName}`
+                            : u.EmployeeID || '-'}
+                        </td>
+                        <td>{u.FullName}</td>
+                        <td>{u.Email}</td>
+                        <td>{u.Username}</td>
+                        <td><b>{u.RoleName}</b></td>
+                        <td>{u.Status}</td>
+                        <td>{u.LastLogin || 'Chưa có'}</td>
+                        <td>
+                          <div className="users-actions">
+                            <button onClick={() => editUser(u)}>Sửa</button>
+                            <button className="danger" onClick={() => handleDelete(u.UserID)}>Xóa</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="users-empty">Chưa có tài khoản</td>
                     </tr>
-                  ))}
-                  {users.length === 0 ? <tr><td colSpan="9" className="users-empty">Chưa có tài khoản</td></tr> : null}
+                  ) : null}
                 </tbody>
               </table>
             </div>

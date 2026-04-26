@@ -58,7 +58,7 @@ function Sidebar() {
 
         {role === 'Admin' || role === 'Manager' ? <div className="sidebar__section">Quản lý Nhân sự</div> : null}
         <RoleLink to="/employees-page" roles={ADMIN_MANAGER}>Danh sách nhân viên</RoleLink>
-        <RoleLink to="/add-employee" roles={ADMIN}>Thêm nhân viên</RoleLink>
+        <RoleLink to="/add-employee" roles={ADMIN_MANAGER}>Thêm nhân viên</RoleLink>
         <RoleLink to="/show-department" roles={ADMIN}>Phòng ban</RoleLink>
         <RoleLink to="/show-human" roles={ADMIN}>Chức vụ</RoleLink>
 
@@ -90,7 +90,7 @@ function ProtectedLayout() {
           <Route path="/" element={<RequireAuth roles={ADMIN_MANAGER}><DashboardPage /></RequireAuth>} />
           <Route path="/my-profile" element={<RequireAuth roles={['Employee']}><EmployeeProfilePage /></RequireAuth>} />
           <Route path="/employees-page" element={<RequireAuth roles={ADMIN_MANAGER}><EmployeesPage /></RequireAuth>} />
-          <Route path="/add-employee" element={<RequireAuth roles={ADMIN}><AddEmployeePage /></RequireAuth>} />
+          <Route path="/add-employee" element={<RequireAuth roles={ADMIN_MANAGER}><AddEmployeePage /></RequireAuth>} />
           <Route path="/show-department" element={<RequireAuth roles={ADMIN}><DepartmentPage /></RequireAuth>} />
           <Route path="/show-human" element={<RequireAuth roles={ADMIN}><PositionPage /></RequireAuth>} />
 

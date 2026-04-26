@@ -7,7 +7,7 @@ import { getRole } from '../utils/auth'
 
 export default function EmployeesPage() {
   const role = getRole()
-  const canManageEmployees = role === 'Admin'
+  const canManageEmployees = role === 'Admin' || role === 'Manager'
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
@@ -53,7 +53,7 @@ export default function EmployeesPage() {
       setEditingEmployee(null)
       load()
     } catch (err) {
-      alert('Cập nhật thất bại')
+      alert(err?.message || err?.error || 'Cập nhật thất bại')
     }
   }
 
@@ -78,7 +78,7 @@ export default function EmployeesPage() {
           <table className="employees-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>STT</th>
                 <th>Họ tên</th>
                 <th>Email</th>
                 <th>Phòng ban</th>
@@ -89,9 +89,9 @@ export default function EmployeesPage() {
             </thead>
 
             <tbody>
-              {rows.map((emp) => (
+              {rows.map((emp, index) => (
                 <tr key={emp.EmployeeID}>
-                  <td>{emp.EmployeeID}</td>
+                  <td>{index + 1}</td>
                   <td className="employee-name">{emp.FullName}</td>
                   <td>{emp.Email}</td>
                   <td>{emp.DepartmentName}</td>

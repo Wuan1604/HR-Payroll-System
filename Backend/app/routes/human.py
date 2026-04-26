@@ -233,7 +233,7 @@ def get_employees():
 # 2. LẤY PHÒNG BAN (Từ SQL Server - HUMAN_2025)
 # ---------------------------------------------------------
 @human_bp.route('/departments', methods=['GET'])
-@roles_required('Admin')
+@roles_required('Admin', 'Manager')
 def get_departments():
     conn = get_sqlserver_connection()
     if not conn: return jsonify({"error": "Lỗi kết nối SQL Server"}), 500
@@ -250,7 +250,7 @@ def get_departments():
 # 3. LẤY CHỨC VỤ (Từ SQL Server - HUMAN_2025)
 # ---------------------------------------------------------
 @human_bp.route('/positions', methods=['GET'])
-@roles_required('Admin')
+@roles_required('Admin', 'Manager')
 def get_positions():
     conn = get_sqlserver_connection()
     if not conn: return jsonify({"error": "Lỗi kết nối SQL Server"}), 500
@@ -267,7 +267,7 @@ def get_positions():
 # 4. THÊM NHÂN VIÊN & ĐỒNG BỘ (SQL Server -> MySQL)
 # ---------------------------------------------------------
 @human_bp.route('/add-employee', methods=['POST'])
-@roles_required('Admin')
+@roles_required('Admin', 'Manager')
 def add_employee():
     data = request.json
     
@@ -340,25 +340,33 @@ def add_employee():
 # 4.1. SỬA NHÂN VIÊN & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/update-employee', methods=['PUT'])
-@roles_required('Admin')
+@roles_required('Admin', 'Manager')
 def update_employee():
     data = request.json or {}
 
     employee_id = data.get("EmployeeID")
-    full_name = data.get("FullName")
-    date_of_birth = data.get("DateOfBirth")
-    gender = data.get("Gender")
-    phone_number = data.get("PhoneNumber")
-    email = data.get("Email")
-    hire_date = data.get("HireDate")
-    department_id = data.get("DepartmentID")
-    position_id = data.get("PositionID")
-    status = data.get("Status")
+    if not employee_id:
+        return jsonify({"error": "Thiếu EmployeeID"}), 400
 
     VALID_STATUSES = ["Đang làm việc", "Thử việc", "Đã nghỉ việc", "Tạm hoãn"]
 
-    if not employee_id:
-        return jsonify({"error": "Thiếu EmployeeID"}), 400
+    def normalize(value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            return value if value != "" else None
+        return value
+
+    full_name = normalize(data.get("FullName"))
+    date_of_birth = normalize(data.get("DateOfBirth"))
+    gender = normalize(data.get("Gender"))
+    phone_number = normalize(data.get("PhoneNumber"))
+    email = normalize(data.get("Email"))
+    hire_date = normalize(data.get("HireDate"))
+    department_id = normalize(data.get("DepartmentID"))
+    position_id = normalize(data.get("PositionID"))
+    status = normalize(data.get("Status"))
 
     if full_name is not None and not str(full_name).strip():
         return jsonify({"error": "Họ tên không được để trống"}), 400
@@ -368,12 +376,14 @@ def update_employee():
 
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
+    auth_conn = get_auth_connection()
 
     if not sql_conn or not my_conn:
         return jsonify({"error": "Kết nối Database thất bại"}), 500
 
     sql_cursor = sql_conn.cursor()
     my_cursor = my_conn.cursor()
+    auth_cursor = auth_conn.cursor() if auth_conn else None
 
     try:
         sql_cursor.execute("""
@@ -385,52 +395,67 @@ def update_employee():
         if not sql_cursor.fetchone():
             return jsonify({"error": "Nhân viên không tồn tại"}), 404
 
-        # SQL Server: field nào không gửi thì giữ nguyên giá trị cũ
-        sql_cursor.execute("""
-            UPDATE [HUMAN_2025].[dbo].[Employees]
-            SET 
-                FullName = COALESCE(?, FullName),
-                DateOfBirth = COALESCE(?, DateOfBirth),
-                Gender = COALESCE(?, Gender),
-                PhoneNumber = COALESCE(?, PhoneNumber),
-                Email = COALESCE(?, Email),
-                HireDate = COALESCE(?, HireDate),
-                DepartmentID = COALESCE(?, DepartmentID),
-                PositionID = COALESCE(?, PositionID),
-                Status = COALESCE(?, Status)
-            WHERE EmployeeID = ?
-        """, (
-            full_name,
-            date_of_birth,
-            gender,
-            phone_number,
-            email,
-            hire_date,
-            department_id,
-            position_id,
-            status,
-            employee_id
-        ))
+        # Cập nhật động để tránh lỗi kiểu dữ liệu với COALESCE trên SQL Server
+        sql_fields = []
+        sql_values = []
 
-        # MySQL: field nào không gửi thì giữ nguyên giá trị cũ
-        my_cursor.execute("""
-            UPDATE employees_payroll
-            SET 
-                FullName = COALESCE(%s, FullName),
-                DepartmentID = COALESCE(%s, DepartmentID),
-                PositionID = COALESCE(%s, PositionID),
-                Status = COALESCE(%s, Status)
-            WHERE EmployeeID = %s
-        """, (
-            full_name,
-            department_id,
-            position_id,
-            status,
-            employee_id
-        ))
+        field_map = [
+            ("FullName", full_name),
+            ("DateOfBirth", date_of_birth),
+            ("Gender", gender),
+            ("PhoneNumber", phone_number),
+            ("Email", email),
+            ("HireDate", hire_date),
+            ("DepartmentID", department_id),
+            ("PositionID", position_id),
+            ("Status", status),
+        ]
+
+        for field_name, value in field_map:
+            if value is not None:
+                sql_fields.append(f"{field_name} = ?")
+                sql_values.append(value)
+
+        if sql_fields:
+            sql_values.append(employee_id)
+            sql_cursor.execute(f"""
+                UPDATE [HUMAN_2025].[dbo].[Employees]
+                SET {', '.join(sql_fields)}
+                WHERE EmployeeID = ?
+            """, tuple(sql_values))
+
+        # Đồng bộ sang MySQL payroll
+        my_fields = []
+        my_values = []
+
+        payroll_map = [
+            ("FullName", full_name),
+            ("DepartmentID", department_id),
+            ("PositionID", position_id),
+            ("Status", status),
+        ]
+
+        for field_name, value in payroll_map:
+            if value is not None:
+                my_fields.append(f"{field_name} = %s")
+                my_values.append(value)
+
+        if my_fields:
+            my_values.append(employee_id)
+            my_cursor.execute(f"""
+                UPDATE employees_payroll
+                SET {', '.join(my_fields)}
+                WHERE EmployeeID = %s
+            """, tuple(my_values))
 
         # Nếu MySQL chưa có employee này thì tự thêm lại để đồng bộ
-        if my_cursor.rowcount == 0:
+        my_cursor.execute("""
+            SELECT COUNT(*)
+            FROM employees_payroll
+            WHERE EmployeeID = %s
+        """, (employee_id,))
+
+        if my_cursor.fetchone()[0] == 0:
             sql_cursor.execute("""
                 SELECT FullName, DepartmentID, PositionID, Status
                 FROM [HUMAN_2025].[dbo].[Employees]
@@ -450,27 +475,56 @@ def update_employee():
                 emp[3]
             ))
 
+        # Đồng bộ tên/email sang tài khoản đăng nhập nếu tài khoản có EmployeeID tương ứng
+        if auth_cursor and (full_name is not None or email is not None):
+            auth_fields = []
+            auth_values = []
+
+            if full_name is not None:
+                auth_fields.append("FullName = %s")
+                auth_values.append(full_name)
+
+            if email is not None:
+                auth_fields.append("Email = %s")
+                auth_values.append(email)
+
+            if auth_fields:
+                auth_values.append(employee_id)
+                auth_cursor.execute(f"""
+                    UPDATE users
+                    SET {', '.join(auth_fields)}
+                    WHERE EmployeeID = %s
+                """, tuple(auth_values))
+
         sql_conn.commit()
         my_conn.commit()
+        if auth_conn:
+            auth_conn.commit()
 
         return jsonify({"message": "Cập nhật nhân viên thành công"}), 200
 
     except Exception as e:
         sql_conn.rollback()
         my_conn.rollback()
+        if auth_conn:
+            auth_conn.rollback()
         return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
 
     finally:
         sql_cursor.close()
         my_cursor.close()
+        if auth_cursor:
+            auth_cursor.close()
         sql_conn.close()
         my_conn.close()
+        if auth_conn:
+            auth_conn.close()
 
 # ---------------------------------------------------------
 # 4.2. XÓA NHÂN VIÊN & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
 @human_bp.route('/delete-employee/<int:employee_id>', methods=['DELETE'])
-@roles_required('Admin')
+@roles_required('Admin', 'Manager')
 def delete_employee(employee_id):
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
@@ -503,7 +557,7 @@ def delete_employee(employee_id):
 
         my_cursor.execute("""
             SELECT COUNT(*) 
-            FROM timekeeping 
+            FROM attendance 
             WHERE EmployeeID = %s
         """, (employee_id,))
 
@@ -647,10 +701,10 @@ def delete_department(id):
         if sql_cursor.fetchone()[0] > 0:
             return jsonify({"error": "Không thể xóa phòng ban đang có nhân viên"}), 400
         
-        sql_cursor.execute("DELETE FROM [HUMAN_2025].[dbo].[Departments] WHERE DepartmentID = ?", (id))
+        sql_cursor.execute("DELETE FROM [HUMAN_2025].[dbo].[Departments] WHERE DepartmentID = ?", (id,))
         sql_conn.commit()
         # Xóa bên MySQL
-        my_conn.cursor().execute("DELETE FROM departments_payroll WHERE DepartmentID = %s", (id))
+        my_conn.cursor().execute("DELETE FROM departments_payroll WHERE DepartmentID = %s", (id,))
         my_conn.commit()
         return jsonify({"message": "Xóa thành công"}), 200
     finally:
