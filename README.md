@@ -113,12 +113,6 @@ PS D:\Visua Studio Code\HR-Payroll-System\frontend> npm run dev
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
 
-
-LƯU Ý: Khi chạy sẽ  có  tự sinh ra các file .pyc là file rác 
-các khắc phục 
-Bật CMD quyền Admin  và chạy lệch setx PYTHONDONTWRITEBYTECODE 1
-sau đó khởi động lại máy 
-tài khoản test
 Admin:
 username: admin
 password: admin123

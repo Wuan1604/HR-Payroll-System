@@ -82,3 +82,10 @@ export function leaveDaysWarning() {
 export function salaryAlerts() {
     return apiFetch('/api/payroll/salary-alerts')
 }
+
+export function getAttendanceSeniority(employeeId = '') {
+    const params = new URLSearchParams()
+    if (employeeId) params.set('employee_id', employeeId)
+    const query = params.toString()
+    return apiFetch(`/api/payroll/attendance/seniority${query ? `?${query}` : ''}`)
+}

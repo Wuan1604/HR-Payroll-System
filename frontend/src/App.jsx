@@ -18,6 +18,7 @@ import RegisterPage from './pages/RegisterPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import UserManagementPage from './pages/UserManagementPage'
 import EmployeeProfilePage from './pages/EmployeeProfilePage'
+import SeniorityPage from './pages/SeniorityPage'
 import { logout } from './api/authApi'
 import { clearAuth, getCurrentUser, getRole } from './utils/auth'
 
@@ -69,7 +70,9 @@ function Sidebar() {
         <RoleLink to="/history-salaries" roles={ADMIN_MANAGER}>Báo cáo và lịch sử lương</RoleLink>
         <RoleLink to="/history-salaries" roles={['Employee']}>Lịch sử lương của tôi</RoleLink>
         <RoleLink to="/timekeeping" roles={ADMIN_MANAGER}>Chấm công</RoleLink>
+        <RoleLink to="/seniority" roles={ADMIN_MANAGER}>Thâm niên nhân viên</RoleLink>
         <RoleLink to="/timekeeping" roles={['Employee']}>Chấm công của tôi</RoleLink>
+        <RoleLink to="/seniority" roles={['Employee']}>Thâm niên của tôi</RoleLink>
         <RoleLink to="/send-salary-emails" roles={ADMIN_MANAGER}>Gửi email phiếu lương</RoleLink>
 
         {role === 'Admin' ? <div className="sidebar__section">Hệ thống</div> : null}
@@ -99,6 +102,7 @@ function ProtectedLayout() {
           <Route path="/history-salaries" element={<RequireAuth roles={ALL_ROLES}><HistorySalariesPage /></RequireAuth>} />
           <Route path="/timekeeping" element={<RequireAuth roles={ALL_ROLES}><TimekeepingPage /></RequireAuth>} />
           <Route path="/send-salary-emails" element={<RequireAuth roles={ADMIN_MANAGER}><SendSalaryEmailsPage /></RequireAuth>} />
+          <Route path="/seniority" element={<RequireAuth roles={ALL_ROLES}><SeniorityPage /></RequireAuth>} />
           <Route path="/users" element={<RequireAuth roles={ADMIN}><UserManagementPage /></RequireAuth>} />
 
           <Route path="/unauthorized" element={<RequireAuth roles={ALL_ROLES}><UnauthorizedPage /></RequireAuth>} />

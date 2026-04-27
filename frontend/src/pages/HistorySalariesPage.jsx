@@ -90,7 +90,7 @@ export default function HistorySalariesPage() {
 
   useEffect(() => {
     loadEmployees()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [])
 
   useEffect(() => {

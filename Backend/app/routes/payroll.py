@@ -271,6 +271,44 @@ def refresh_monthly_attendance_summary(cursor, employee_id, month_value):
     return summary
 
 
+
+
+def format_seniority_by_work_units(total_valid_days):
+    """
+    Quy đổi thâm niên theo công chuẩn của hệ thống:
+    - 26 công = 1 tháng
+    - 12 tháng = 1 năm = 312 công
+
+    Chỉ nhận vào số công hợp lệ để tính thâm niên.
+    Công hợp lệ = ngày/công đã làm + ngày nghỉ phép được chấm.
+    Không cộng ngày nghỉ không phép hoặc ngày thiếu bản ghi chấm công.
+    """
+    total_valid_days = float(total_valid_days or 0)
+
+    years = int(total_valid_days // 312)
+    remaining_days = total_valid_days % 312
+    months = int(remaining_days // 26)
+    days = remaining_days % 26
+
+    parts = []
+    if years > 0:
+        parts.append(f"{years} năm")
+    if months > 0:
+        parts.append(f"{months} tháng")
+
+    if days > 0 or not parts:
+        if float(days).is_integer():
+            parts.append(f"{int(days)} ngày")
+        else:
+            parts.append(f"{days:.1f} ngày")
+
+    return {
+        'years': years,
+        'months': months,
+        'days': round(days, 2),
+        'text': ' '.join(parts)
+    }
+
 # =========================================================
 # 1. HIỂN THỊ BẢNG LƯƠNG
 # =========================================================
@@ -521,6 +559,182 @@ def attendance_details():
 @roles_required('Admin', 'Manager', 'Employee')
 def attendance_summary():
     return attendance_details()
+
+
+
+
+@payroll_bp.route('/attendance/seniority', methods=['GET'])
+@roles_required('Admin', 'Manager', 'Employee')
+def attendance_seniority():
+    """Xem thâm niên theo công được ghi nhận trong chấm công.
+
+    Công thức theo yêu cầu:
+    - 26 công = 1 tháng.
+    - 12 tháng = 1 năm.
+    - Công tính thâm niên = công/ngày đã làm + ngày nghỉ phép được chấm.
+    - Không cộng ngày nghỉ không phép hoặc ngày chưa có bản ghi chấm công.
+
+    Nguồn ưu tiên:
+    - attendance_details: lấy WorkUnit cho ngày đi làm và Status = 'Nghỉ phép'.
+    - Nếu chưa có attendance_details thì fallback sang attendance.WorkDays + attendance.LeaveDays.
+    """
+    employee_id = request.args.get('employee_id')
+    user = getattr(request, 'current_user', {})
+
+    if user.get('Role') == 'Employee':
+        employee_id = user.get('EmployeeID')
+
+    if employee_id and is_employee_requesting_other_employee(employee_id):
+        return jsonify({"error": "Bạn chỉ được xem thâm niên của chính mình"}), 403
+
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_attendance_details_table(cursor)
+
+        where_sql = ''
+        params = []
+        if employee_id:
+            where_sql = 'WHERE e.EmployeeID = %s'
+            params.append(employee_id)
+
+        cursor.execute(f"""
+            SELECT
+                e.EmployeeID,
+                e.FullName,
+                e.DepartmentID,
+                e.PositionID,
+                e.Status,
+                COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                COALESCE(p.PositionName, 'N/A') AS PositionName,
+                COALESCE(SUM(a.WorkDays), 0) AS FallbackWorkDays,
+                COALESCE(SUM(a.AbsentDays), 0) AS FallbackAbsentDays,
+                COALESCE(SUM(a.LeaveDays), 0) AS FallbackLeaveDays,
+                COUNT(a.AttendanceID) AS AttendanceMonthCount,
+                MIN(a.AttendanceMonth) AS FirstAttendanceMonth,
+                MAX(a.AttendanceMonth) AS LastAttendanceMonth
+            FROM employees_payroll e
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            LEFT JOIN attendance a ON e.EmployeeID = a.EmployeeID
+            {where_sql}
+            GROUP BY e.EmployeeID, e.FullName, e.DepartmentID, e.PositionID, e.Status,
+                     d.DepartmentName, p.PositionName
+            ORDER BY e.EmployeeID ASC
+        """, tuple(params))
+        rows = cursor.fetchall()
+
+        employee_ids = [int(row['EmployeeID']) for row in rows]
+        detail_map = {}
+        if employee_ids:
+            placeholders = ','.join(['%s'] * len(employee_ids))
+            cursor.execute(f"""
+                SELECT
+                    EmployeeID,
+                    MIN(WorkDate) AS FirstWorkDate,
+                    MAX(WorkDate) AS LastWorkDate,
+                    COALESCE(SUM(TotalHours), 0) AS TotalHours,
+                    COALESCE(SUM(CASE WHEN Status = 'Đi làm' THEN WorkUnit ELSE 0 END), 0) AS DetailWorkUnits,
+                    COALESCE(SUM(CASE WHEN Status = 'Nghỉ phép' THEN 1 ELSE 0 END), 0) AS DetailLeaveDays,
+                    COALESCE(SUM(CASE WHEN Status = 'Nghỉ không phép' THEN 1 ELSE 0 END), 0) AS DetailUnpaidAbsentDays,
+                    COALESCE(SUM(CASE WHEN Status = 'Đi làm' AND WorkUnit > 0 THEN 1 ELSE 0 END), 0) AS RecordedWorkDays,
+                    COALESCE(SUM(CASE WHEN Status = 'Đi làm' AND WorkUnit > 0 AND WorkUnit < 1 THEN 1 ELSE 0 END), 0) AS RecordedShortDays,
+                    COUNT(*) AS DetailRecordCount
+                FROM attendance_details
+                WHERE EmployeeID IN ({placeholders})
+                GROUP BY EmployeeID
+            """, tuple(employee_ids))
+            for detail in cursor.fetchall():
+                detail_map[int(detail['EmployeeID'])] = detail
+
+        seniority = []
+        total_work_days_all = 0.0
+        total_leave_days_all = 0.0
+        total_absent_days_all = 0.0
+        total_hours_all = 0.0
+        total_valid_days_all = 0.0
+
+        for row in rows:
+            emp_id = int(row['EmployeeID'])
+            detail = detail_map.get(emp_id, {})
+            has_detail = int(detail.get('DetailRecordCount') or 0) > 0
+
+            fallback_work_days = float(row.get('FallbackWorkDays') or 0)
+            fallback_leave_days = float(row.get('FallbackLeaveDays') or 0)
+            fallback_absent_days = float(row.get('FallbackAbsentDays') or 0)
+
+            if has_detail:
+                total_work_days = float(detail.get('DetailWorkUnits') or 0)
+                total_leave_days = float(detail.get('DetailLeaveDays') or 0)
+                total_absent_days = float(detail.get('DetailUnpaidAbsentDays') or 0)
+                total_hours = float(detail.get('TotalHours') or 0)
+                first_attendance = detail.get('FirstWorkDate')
+                last_attendance = detail.get('LastWorkDate')
+                recorded_work_days = int(detail.get('RecordedWorkDays') or 0)
+                recorded_short_days = int(detail.get('RecordedShortDays') or 0)
+            else:
+                total_work_days = fallback_work_days
+                total_leave_days = fallback_leave_days
+                total_absent_days = fallback_absent_days
+                total_hours = 0.0
+                first_attendance = row.get('FirstAttendanceMonth')
+                last_attendance = row.get('LastAttendanceMonth')
+                recorded_work_days = int(round(fallback_work_days))
+                recorded_short_days = 0
+
+            # Công hợp lệ để tính thâm niên: công đã làm + nghỉ phép được chấm.
+            total_valid_days = total_work_days + total_leave_days
+            duration = format_seniority_by_work_units(total_valid_days)
+
+            total_work_days_all += total_work_days
+            total_leave_days_all += total_leave_days
+            total_absent_days_all += total_absent_days
+            total_hours_all += total_hours
+            total_valid_days_all += total_valid_days
+
+            seniority.append({
+                'EmployeeID': emp_id,
+                'FullName': row.get('FullName'),
+                'DepartmentID': row.get('DepartmentID'),
+                'PositionID': row.get('PositionID'),
+                'DepartmentName': row.get('DepartmentName') or 'N/A',
+                'PositionName': row.get('PositionName') or 'N/A',
+                'Status': row.get('Status'),
+                'FirstAttendanceDate': to_json_date(first_attendance),
+                'LastAttendanceDate': to_json_date(last_attendance),
+                'AttendanceMonthCount': int(row.get('AttendanceMonthCount') or 0),
+                'TotalWorkDays': round(total_work_days, 2),
+                'TotalLeaveDays': round(total_leave_days, 2),
+                'TotalAbsentDays': round(total_absent_days, 2),
+                'TotalValidDays': round(total_valid_days, 2),
+                'TotalHours': round(total_hours, 2),
+                'RecordedWorkDays': recorded_work_days,
+                'RecordedShortDays': recorded_short_days,
+                'SeniorityYears': duration['years'],
+                'SeniorityMonths': duration['months'],
+                'SeniorityDays': duration['days'],
+                'SeniorityText': duration['text'],
+            })
+
+        return jsonify({
+            'employees': seniority,
+            'summary': {
+                'EmployeeCount': len(seniority),
+                'TotalWorkDays': round(total_work_days_all, 2),
+                'TotalLeaveDays': round(total_leave_days_all, 2),
+                'TotalAbsentDays': round(total_absent_days_all, 2),
+                'TotalValidDays': round(total_valid_days_all, 2),
+                'TotalHours': round(total_hours_all, 2),
+                'RuleText': 'Thâm niên = Tổng công đã làm + nghỉ phép được chấm; 26 công = 1 tháng.'
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 
 # =========================================================

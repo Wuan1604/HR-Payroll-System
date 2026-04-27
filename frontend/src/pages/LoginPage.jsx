@@ -36,8 +36,7 @@ export default function LoginPage() {
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-brand">HR & Payroll</div>
         <h1>Đăng nhập hệ thống</h1>
-        <p>Đăng nhập để sử dụng chức năng theo quyền Admin, Manager hoặc Employee.</p>
-
+    
         {error ? <div className="auth-error">{error}</div> : null}
 
         <label>
@@ -64,8 +63,7 @@ export default function LoginPage() {
         </button>
 
         <div className="auth-hint">
-          Tài khoản mẫu: admin/admin123, manager/manager123, employee/employee123<br />
-          Chưa có tài khoản? <Link to="/register">Đăng ký Employee</Link>
+          Chưa có tài khoản? <Link to="/register">Đăng ký tài khoản</Link>
         </div>
       </form>
     </div>

@@ -280,7 +280,7 @@ export default function SendSalaryEmailsPage() {
                             />
                           </td>
                           <td>{index + 1}</td>
-                          <td><strong>{item.FullName}</strong><div className="mail-employee-code">Mã NV: {item.EmployeeID}</div></td>
+                          <td><strong>{item.FullName}</strong></td>
                           <td>{item.Email || 'Chưa có email'}</td>
                           <td>{item.DepartmentName || 'Chưa có'}</td>
                           <td>{item.PositionName || 'Chưa có'}</td>

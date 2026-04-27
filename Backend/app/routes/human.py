@@ -5,6 +5,41 @@ import pyodbc
 
 human_bp = Blueprint('human', __name__)
 
+
+# ---------------------------------------------------------
+# HELPER - TẠO EMPLOYEEID LIÊN TỤC, TRÁNH LỖI IDENTITY JUMP 1000
+# ---------------------------------------------------------
+def get_next_employee_id(sql_cursor):
+    """
+    SQL Server IDENTITY có thể bị nhảy 1000 sau khi restart do identity cache.
+    Hàm này lấy số EmployeeID còn trống nhỏ nhất để nhân viên mới có mã liên tục.
+    Dùng UPDLOCK/HOLDLOCK để hạn chế 2 request cùng lấy trùng ID.
+    """
+    sql_cursor.execute("""
+        WITH CandidateIDs AS (
+            SELECT CAST(1 AS INT) AS NextID
+            UNION ALL
+            SELECT EmployeeID + 1 AS NextID
+            FROM [HUMAN_2025].[dbo].[Employees] WITH (UPDLOCK, HOLDLOCK)
+        )
+        SELECT MIN(c.NextID)
+        FROM CandidateIDs c
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM [HUMAN_2025].[dbo].[Employees] e WITH (UPDLOCK, HOLDLOCK)
+            WHERE e.EmployeeID = c.NextID
+        )
+    """)
+
+    row = sql_cursor.fetchone()
+    return int(row[0] or 1)
+
+
+def safe_int_or_none(value):
+    if value is None or value == '':
+        return None
+    return int(value)
+
 # ---------------------------------------------------------
 # 0. EMPLOYEE - XEM / SỬA THÔNG TIN CÁ NHÂN
 # ---------------------------------------------------------
@@ -206,6 +241,7 @@ def get_employees():
             FROM [HUMAN_2025].[dbo].[Employees] e
             LEFT JOIN [HUMAN_2025].[dbo].[Departments] d ON e.DepartmentID = d.DepartmentID
             LEFT JOIN [HUMAN_2025].[dbo].[Positions] p ON e.PositionID = p.PositionID
+            ORDER BY e.EmployeeID ASC
         """)
         rows = cursor.fetchall()
         employees = [{
@@ -269,67 +305,98 @@ def get_positions():
 @human_bp.route('/add-employee', methods=['POST'])
 @roles_required('Admin', 'Manager')
 def add_employee():
-    data = request.json
-    
-    # Kiểm tra Status hợp lệ
+    data = request.json or {}
+
     VALID_STATUSES = ["Đang làm việc", "Thử việc", "Đã nghỉ việc", "Tạm hoãn"]
     user_status = data.get("Status")
+
     if user_status not in VALID_STATUSES:
         return jsonify({"error": "Trạng thái không hợp lệ"}), 400
 
+    required_fields = ["FullName", "DateOfBirth", "HireDate"]
+    missing_fields = [field for field in required_fields if not str(data.get(field) or '').strip()]
+
+    if missing_fields:
+        return jsonify({"error": "Thiếu thông tin bắt buộc: " + ", ".join(missing_fields)}), 400
+
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
-    
+
     if not sql_conn or not my_conn:
         return jsonify({"error": "Kết nối Database thất bại"}), 500
 
     sql_cursor = sql_conn.cursor()
     my_cursor = my_conn.cursor()
-    
-    try:
-      
-        sql_query = """
-            INSERT INTO [HUMAN_2025].[dbo].[Employees] 
-            (FullName, DateOfBirth, Gender, PhoneNumber, Email, HireDate, DepartmentID, PositionID, Status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        sql_values = (
-            data.get("FullName"), data.get("DateOfBirth"), data.get("Gender"), 
-            data.get("PhoneNumber"), data.get("Email"), data.get("HireDate"), 
-            data.get("DepartmentID"), data.get("PositionID"), user_status
-        )
-        sql_cursor.execute(sql_query, sql_values)
-        
-        sql_cursor.execute("SELECT @@IDENTITY")
-        new_employee_id = int(sql_cursor.fetchone()[0])
-        
-        sql_conn.commit()
+    identity_insert_on = False
 
-        my_query = """
+    try:
+        # Không dùng @@IDENTITY vì có thể lấy nhầm ID từ bảng khác/triggers.
+        # Không dùng IDENTITY tự tăng trực tiếp vì SQL Server có thể bị nhảy 1000 sau restart.
+        # Hệ thống tự chọn EmployeeID còn trống nhỏ nhất để mã nhân viên chạy liên tục.
+        new_employee_id = get_next_employee_id(sql_cursor)
+
+        sql_cursor.execute("SET IDENTITY_INSERT [HUMAN_2025].[dbo].[Employees] ON")
+        identity_insert_on = True
+
+        sql_cursor.execute("""
+            INSERT INTO [HUMAN_2025].[dbo].[Employees]
+                (EmployeeID, FullName, DateOfBirth, Gender, PhoneNumber, Email, HireDate, DepartmentID, PositionID, Status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            new_employee_id,
+            data.get("FullName"),
+            data.get("DateOfBirth"),
+            data.get("Gender"),
+            data.get("PhoneNumber"),
+            data.get("Email"),
+            data.get("HireDate"),
+            safe_int_or_none(data.get("DepartmentID")),
+            safe_int_or_none(data.get("PositionID")),
+            user_status,
+        ))
+
+        sql_cursor.execute("SET IDENTITY_INSERT [HUMAN_2025].[dbo].[Employees] OFF")
+        identity_insert_on = False
+
+        my_cursor.execute("""
             INSERT INTO employees_payroll (EmployeeID, FullName, DepartmentID, PositionID, Status)
             VALUES (%s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-                FullName = VALUES(FullName), 
-                Status = VALUES(Status),
+            ON DUPLICATE KEY UPDATE
+                FullName = VALUES(FullName),
                 DepartmentID = VALUES(DepartmentID),
-                PositionID = VALUES(PositionID)
-        """
-        my_values = (
-            new_employee_id, # Dùng ID từ SQL Server để đồng nhất
-            data.get("FullName"), 
-            data.get("DepartmentID"), 
-            data.get("PositionID"), 
-            user_status
-        )
-        my_cursor.execute(my_query, my_values)
+                PositionID = VALUES(PositionID),
+                Status = VALUES(Status)
+        """, (
+            new_employee_id,
+            data.get("FullName"),
+            safe_int_or_none(data.get("DepartmentID")),
+            safe_int_or_none(data.get("PositionID")),
+            user_status,
+        ))
+
+        sql_conn.commit()
         my_conn.commit()
-        
-        return jsonify({"message": "Thêm mới và đồng bộ thành công!", "id": new_employee_id}), 200
+
+        return jsonify({
+            "message": "Thêm mới và đồng bộ thành công!",
+            "id": new_employee_id,
+            "EmployeeID": new_employee_id,
+        }), 200
 
     except Exception as e:
-        if sql_conn: sql_conn.rollback()
-        if my_conn: my_conn.rollback()
+        try:
+            if identity_insert_on:
+                sql_cursor.execute("SET IDENTITY_INSERT [HUMAN_2025].[dbo].[Employees] OFF")
+        except Exception:
+            pass
+
+        if sql_conn:
+            sql_conn.rollback()
+        if my_conn:
+            my_conn.rollback()
+
         return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
+
     finally:
         sql_cursor.close()
         my_cursor.close()
@@ -655,7 +722,7 @@ def add_department():
     try:
         # 1. Thêm vào SQL Server
         sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName) VALUES (?)", (name,))
-        sql_cursor.execute("SELECT @@IDENTITY")
+        sql_cursor.execute("SELECT CAST(SCOPE_IDENTITY() AS INT)")
         new_id = int(sql_cursor.fetchone()[0])
         sql_conn.commit()
 
@@ -844,7 +911,7 @@ def add_position():
             VALUES (?)
         """, (name,))
 
-        sql_cursor.execute("SELECT @@IDENTITY")
+        sql_cursor.execute("SELECT CAST(SCOPE_IDENTITY() AS INT)")
         new_id = int(sql_cursor.fetchone()[0])
 
         my_cursor.execute("""

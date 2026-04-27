@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
-import { addEmployee, getDepartments, getPositions } from '../api/humanApi' // Giả sử bạn đã khai báo 2 hàm này
+import { addEmployee, getDepartments, getPositions } from '../api/humanApi' 
 import '../styles/AddEmployeePage.css' 
 export default function AddEmployeePage() {
   const navigate = useNavigate()
