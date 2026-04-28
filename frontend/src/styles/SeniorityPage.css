@@ -315,3 +315,19 @@
     width: 100%;
   }
 }
+
+.seniority-raise-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.seniority-muted {
+  color: #64748b;
+  font-size: 13px;
+}

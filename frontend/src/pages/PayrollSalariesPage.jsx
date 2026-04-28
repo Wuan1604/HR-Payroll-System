@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
-import { getSalaries } from '../api/payrollApi'
+import { getSalaries, downloadSalaryReport } from '../api/payrollApi'
 import '../styles/PayrollSalariesPage.css'
 
 function formatMoney(value) {
@@ -30,6 +30,8 @@ export default function PayrollSalariesPage() {
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedReportEmployeeId, setSelectedReportEmployeeId] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -63,6 +65,39 @@ export default function PayrollSalariesPage() {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const employeeOptions = useMemo(() => {
+    const map = new Map()
+    rows.forEach((item) => {
+      if (item.EmployeeID) map.set(item.EmployeeID, item.FullName || 'NV ' + item.EmployeeID)
+    })
+    return Array.from(map.entries()).map(([EmployeeID, FullName]) => ({ EmployeeID, FullName }))
+  }, [rows])
+
+  async function handleExportSalaryReport(format = 'pdf') {
+    setExporting(true)
+    setError(null)
+    try {
+      const blob = await downloadSalaryReport({
+        month: selectedMonth,
+        employee_id: selectedReportEmployeeId,
+        format,
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const employeePart = selectedReportEmployeeId ? '-nv-' + selectedReportEmployeeId : ''
+      a.href = url
+      a.download = 'bao-cao-luong-' + (selectedMonth || 'tat-ca') + employeePart + '.' + format
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const availableMonths = useMemo(() => {
     const months = new Set()
@@ -123,7 +158,7 @@ export default function PayrollSalariesPage() {
 
       {!loading && !error ? (
         <>
-          <div className="payroll-filter-card">
+                    <div className="payroll-filter-card">
             <label className="payroll-field">
               <span>Lọc theo tháng lương</span>
               <input
@@ -148,6 +183,30 @@ export default function PayrollSalariesPage() {
               </select>
             </label>
 
+            <label className="payroll-field">
+              <span>Nhân viên khi xuất báo cáo</span>
+              <select
+                value={selectedReportEmployeeId}
+                onChange={(e) => setSelectedReportEmployeeId(e.target.value)}
+              >
+                <option value="">Toàn bộ nhân viên</option>
+                {employeeOptions.map((emp) => (
+                  <option key={emp.EmployeeID} value={emp.EmployeeID}>
+                    {emp.EmployeeID} - {emp.FullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              className="payroll-clear-btn"
+              type="button"
+              onClick={() => handleExportSalaryReport('pdf')}
+              disabled={exporting}
+            >
+              {exporting ? 'Đang xuất...' : 'Xuất PDF bảng lương'}
+            </button>
+
             <button
               className="payroll-clear-btn"
               type="button"
@@ -156,6 +215,7 @@ export default function PayrollSalariesPage() {
               Xem tất cả
             </button>
           </div>
+
 
           <div className="payroll-summary-grid">
             <div className="payroll-summary-card">

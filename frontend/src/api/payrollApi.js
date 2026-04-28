@@ -67,8 +67,13 @@ export function salariesMonth(month, year) {
     return apiFetch(`/api/payroll/salaries/month/${month}/${year}`)
 }
 
-export function reportSalaries() {
-    return apiFetch('/api/payroll/report-salaries')
+export function reportSalaries(params = {}) {
+    const query = new URLSearchParams()
+    if (params.month) query.set('month', params.month)
+    if (params.employee_id) query.set('employee_id', params.employee_id)
+    if (params.format) query.set('format', params.format)
+    const qs = query.toString()
+    return apiFetch('/api/payroll/report-salaries' + (qs ? '?' + qs : ''))
 }
 
 export function employeeAnniversaryWarning() {
@@ -88,4 +93,33 @@ export function getAttendanceSeniority(employeeId = '') {
     if (employeeId) params.set('employee_id', employeeId)
     const query = params.toString()
     return apiFetch(`/api/payroll/attendance/seniority${query ? `?${query}` : ''}`)
+}
+
+export async function downloadSalaryReport(params = {}) {
+    const { getToken } = await import('../utils/auth')
+    const query = new URLSearchParams()
+    if (params.month) query.set('month', params.month)
+    if (params.employee_id) query.set('employee_id', params.employee_id)
+    query.set('format', params.format || 'pdf')
+
+    const token = getToken()
+    const res = await fetch('/api/payroll/report-salaries?' + query.toString(), {
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+    if (!res.ok) {
+        let message = `HTTP ${res.status}`
+        try {
+            const data = await res.json()
+            message = data?.error || message
+        } catch {
+            try {
+                message = (await res.text()) || message
+            } catch {}
+        }
+        throw new Error(message)
+    }
+
+    return res.blob()
 }

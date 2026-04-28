@@ -852,6 +852,58 @@ def update_position():
 # ---------------------------------------------------------
 # 7.2. XÓA CHỨC VỤ & ĐỒNG BỘ SQL Server -> MySQL
 # ---------------------------------------------------------
+@human_bp.route('/delete-position/<int:id>', methods=['DELETE'])
+@roles_required('Admin')
+def delete_position(id):
+    sql_conn = get_sqlserver_connection()
+    my_conn = get_mysql_connection()
+
+    if not sql_conn or not my_conn:
+        return jsonify({"error": "Kết nối Database thất bại"}), 500
+
+    sql_cursor = sql_conn.cursor()
+    my_cursor = my_conn.cursor(dictionary=True)
+
+    try:
+        sql_cursor.execute("""
+            SELECT COUNT(*)
+            FROM [HUMAN_2025].[dbo].[Employees]
+            WHERE PositionID = ?
+        """, (id,))
+        if sql_cursor.fetchone()[0] > 0:
+            return jsonify({"error": "Không thể xóa chức vụ đang có nhân viên sử dụng"}), 400
+
+        sql_cursor.execute("""
+            SELECT COUNT(*)
+            FROM [HUMAN_2025].[dbo].[Positions]
+            WHERE PositionID = ?
+        """, (id,))
+        if sql_cursor.fetchone()[0] == 0:
+            return jsonify({"error": "Chức vụ không tồn tại"}), 404
+
+        my_cursor.execute("SELECT COUNT(*) AS total FROM employees_payroll WHERE PositionID = %s", (id,))
+        if int((my_cursor.fetchone() or {}).get('total') or 0) > 0:
+            return jsonify({"error": "Không thể xóa chức vụ đang có nhân viên payroll sử dụng"}), 400
+
+        sql_cursor.execute("DELETE FROM [HUMAN_2025].[dbo].[Positions] WHERE PositionID = ?", (id,))
+        my_cursor.execute("DELETE FROM positions_payroll WHERE PositionID = %s", (id,))
+
+        sql_conn.commit()
+        my_conn.commit()
+        return jsonify({"message": "Xóa chức vụ thành công"}), 200
+
+    except Exception as e:
+        sql_conn.rollback()
+        my_conn.rollback()
+        return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
+
+    finally:
+        sql_cursor.close()
+        my_cursor.close()
+        sql_conn.close()
+        my_conn.close()
+
+
 @human_bp.route('/show-human', methods=['GET'])
 @roles_required('Admin')
 def show_positions():
@@ -887,13 +939,14 @@ def show_positions():
         conn.close()
 
 
+@human_bp.route('/create-position', methods=['POST'])
 @human_bp.route('/add-position', methods=['POST'])
 @roles_required('Admin')
 def add_position():
     data = request.json or {}
-    name = data.get('PositionName')
+    name = (data.get('PositionName') or data.get('name') or '').strip()
 
-    if not name or not str(name).strip():
+    if not name:
         return jsonify({"error": "Tên chức vụ không được để trống"}), 400
 
     sql_conn = get_sqlserver_connection()
@@ -907,16 +960,24 @@ def add_position():
 
     try:
         sql_cursor.execute("""
+            SELECT PositionID
+            FROM [HUMAN_2025].[dbo].[Positions]
+            WHERE LOWER(LTRIM(RTRIM(PositionName))) = LOWER(LTRIM(RTRIM(?)))
+        """, (name,))
+        if sql_cursor.fetchone():
+            return jsonify({"error": "Chức vụ đã tồn tại"}), 400
+
+        sql_cursor.execute("""
             INSERT INTO [HUMAN_2025].[dbo].[Positions] (PositionName)
+            OUTPUT INSERTED.PositionID
             VALUES (?)
         """, (name,))
-
-        sql_cursor.execute("SELECT CAST(SCOPE_IDENTITY() AS INT)")
         new_id = int(sql_cursor.fetchone()[0])
 
         my_cursor.execute("""
             INSERT INTO positions_payroll (PositionID, PositionName)
             VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE PositionName = VALUES(PositionName)
         """, (new_id, name))
 
         sql_conn.commit()
@@ -924,7 +985,8 @@ def add_position():
 
         return jsonify({
             "message": "Thêm chức vụ thành công",
-            "id": new_id
+            "PositionID": new_id,
+            "PositionName": name
         }), 201
 
     except Exception as e:

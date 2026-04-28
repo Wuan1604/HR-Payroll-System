@@ -1,12 +1,37 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 from app.database import get_mysql_connection, get_sqlserver_connection
 from ..config import Config
 from app.auth import roles_required, is_employee_requesting_other_employee
 from datetime import datetime, date, time, timedelta
 import calendar
+import csv
+import os
+import unicodedata
+import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+except Exception:
+    colors = None
+    A4 = None
+    landscape = None
+    getSampleStyleSheet = None
+    mm = None
+    pdfmetrics = None
+    TTFont = None
+    SimpleDocTemplate = None
+    Table = None
+    TableStyle = None
+    Paragraph = None
+    Spacer = None
 from email.header import Header
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -717,6 +742,7 @@ def attendance_seniority():
                 'SeniorityMonths': duration['months'],
                 'SeniorityDays': duration['days'],
                 'SeniorityText': duration['text'],
+                'SalaryRaiseSuggestion': build_salary_raise_suggestion(total_valid_days),
             })
 
         return jsonify({
@@ -733,6 +759,426 @@ def attendance_seniority():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def build_salary_raise_suggestion(total_valid_days, base_salary=0):
+    total_valid_days = float(total_valid_days or 0)
+    years = int(total_valid_days // 312)
+    if years <= 0:
+        return {
+            'Eligible': False,
+            'Level': 'none',
+            'SuggestedPercent': 0,
+            'SuggestedAmount': 0,
+            'Text': 'Chưa đủ 1 năm thâm niên'
+        }
+
+    if years >= 5:
+        percent, level = 10, 'high'
+    elif years >= 3:
+        percent, level = 7, 'medium'
+    else:
+        percent, level = 5, 'low'
+
+    return {
+        'Eligible': True,
+        'Level': level,
+        'SuggestedPercent': percent,
+        'SuggestedAmount': round(float(base_salary or 0) * percent / 100, 2),
+        'Text': f'Gợi ý tăng {percent}% lương cơ bản vì đã đạt {years} năm thâm niên'
+    }
+
+
+def salary_report_rows(cursor, month_value=None, employee_id=None):
+    where = []
+    params = []
+    if month_value:
+        where.append("DATE_FORMAT(s.SalaryMonth, '%Y-%m') = %s")
+        params.append(str(month_value)[:7])
+    if employee_id:
+        where.append('s.EmployeeID = %s')
+        params.append(employee_id)
+    where_sql = 'WHERE ' + ' AND '.join(where) if where else ''
+
+    cursor.execute(f"""
+        SELECT
+            s.SalaryID, s.EmployeeID, e.FullName,
+            COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+            COALESCE(p.PositionName, 'N/A') AS PositionName,
+            e.Status, s.SalaryMonth, s.BaseSalary, s.Bonus, s.Deductions,
+            s.NetSalary, s.CreatedAt
+        FROM salaries s
+        LEFT JOIN employees_payroll e ON s.EmployeeID = e.EmployeeID
+        LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+        LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+        {where_sql}
+        ORDER BY s.SalaryMonth DESC, s.EmployeeID ASC, s.SalaryID DESC
+    """, tuple(params))
+    rows = cursor.fetchall()
+    result = []
+    for row in rows:
+        result.append({
+            'SalaryID': int(row.get('SalaryID') or 0),
+            'EmployeeID': int(row.get('EmployeeID') or 0),
+            'FullName': row.get('FullName') or 'N/A',
+            'DepartmentName': row.get('DepartmentName') or 'N/A',
+            'PositionName': row.get('PositionName') or 'N/A',
+            'Status': row.get('Status') or 'N/A',
+            'SalaryMonth': to_json_date(row.get('SalaryMonth')),
+            'BaseSalary': float(row.get('BaseSalary') or 0),
+            'Bonus': float(row.get('Bonus') or 0),
+            'Deductions': float(row.get('Deductions') or 0),
+            'NetSalary': float(row.get('NetSalary') or 0),
+            'CreatedAt': str(row.get('CreatedAt')) if row.get('CreatedAt') else None,
+        })
+    return result
+
+
+
+
+def _salary_pdf_font_name():
+    if pdfmetrics is None or TTFont is None:
+        return 'Helvetica'
+
+    candidates = [
+        os.path.join(os.getcwd(), 'DejaVuSans.ttf'),
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf',
+        'C:/Windows/Fonts/arial.ttf',
+        'C:/Windows/Fonts/calibri.ttf',
+    ]
+
+    for path in candidates:
+        try:
+            if os.path.exists(path):
+                pdfmetrics.registerFont(TTFont('PayrollUnicode', path))
+                return 'PayrollUnicode'
+        except Exception:
+            continue
+
+    return 'Helvetica'
+
+
+def _pdf_text(value):
+    text = '' if value is None else str(value)
+    if _salary_pdf_font_name() != 'Helvetica':
+        return text
+    # Fallback khi máy chưa có font unicode: bỏ dấu để PDF không lỗi encoding.
+    return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+
+
+def _format_money_vnd(value):
+    try:
+        return f"{float(value or 0):,.0f} VND".replace(',', '.')
+    except Exception:
+        return '0 VND'
+
+
+def build_salary_report_pdf(rows, summary):
+    if SimpleDocTemplate is None:
+        raise RuntimeError('Thiếu thư viện reportlab. Hãy cài: pip install reportlab')
+
+    font_name = _salary_pdf_font_name()
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=8 * mm,
+        leftMargin=8 * mm,
+        topMargin=8 * mm,
+        bottomMargin=8 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+    styles['Title'].fontName = font_name
+    styles['Normal'].fontName = font_name
+
+    month_label = summary.get('Month') or 'Tat ca'
+    employee_label = summary.get('EmployeeID') or 'Tat ca nhan vien'
+    story = [
+        Paragraph(_pdf_text(f"BAO CAO BANG LUONG - {month_label}"), styles['Title']),
+        Spacer(1, 4 * mm),
+        Paragraph(_pdf_text(
+            f"Nhan vien: {employee_label} | So ban ghi: {summary.get('RecordCount', 0)} | "
+            f"Tong thuc nhan: {_format_money_vnd(summary.get('TotalNetSalary'))}"
+        ), styles['Normal']),
+        Spacer(1, 5 * mm),
+    ]
+
+    table_data = [[
+        _pdf_text('Ma NV'), _pdf_text('Ho va ten'), _pdf_text('Phong ban'),
+        _pdf_text('Chuc vu'), _pdf_text('Thang'), _pdf_text('Luong co ban'),
+        _pdf_text('Thuong'), _pdf_text('Khau tru'), _pdf_text('Thuc nhan'), _pdf_text('Trang thai')
+    ]]
+
+    for row in rows:
+        table_data.append([
+            row.get('EmployeeID'),
+            _pdf_text(row.get('FullName')),
+            _pdf_text(row.get('DepartmentName')),
+            _pdf_text(row.get('PositionName')),
+            _pdf_text(str(row.get('SalaryMonth') or '')[:10]),
+            _format_money_vnd(row.get('BaseSalary')),
+            _format_money_vnd(row.get('Bonus')),
+            _format_money_vnd(row.get('Deductions')),
+            _format_money_vnd(row.get('NetSalary')),
+            _pdf_text(row.get('Status')),
+        ])
+
+    table = Table(table_data, repeatRows=1, colWidths=[16*mm, 36*mm, 34*mm, 28*mm, 22*mm, 27*mm, 23*mm, 23*mm, 28*mm, 25*mm])
+    table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#111827')),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#d1d5db')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (5, 1), (8, -1), 'RIGHT'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fafafa')]),
+    ]))
+    story.append(table)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+@payroll_bp.route('/report-salaries', methods=['GET'])
+@roles_required('Admin', 'Manager', 'Employee')
+def report_salaries():
+    user = getattr(request, 'current_user', {})
+    month_value = request.args.get('month') or request.args.get('salary_month')
+    employee_id = request.args.get('employee_id')
+    export_format = (request.args.get('format') or 'json').lower()
+
+    if user.get('Role') == 'Employee':
+        employee_id = user.get('EmployeeID')
+    elif employee_id:
+        try:
+            employee_id = int(employee_id)
+        except Exception:
+            return jsonify({'error': 'employee_id không hợp lệ'}), 400
+
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({'error': 'Lỗi kết nối MySQL'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        rows = salary_report_rows(cursor, month_value, employee_id)
+        summary = {
+            'EmployeeCount': len({r['EmployeeID'] for r in rows}),
+            'RecordCount': len(rows),
+            'TotalBaseSalary': round(sum(r['BaseSalary'] for r in rows), 2),
+            'TotalBonus': round(sum(r['Bonus'] for r in rows), 2),
+            'TotalDeductions': round(sum(r['Deductions'] for r in rows), 2),
+            'TotalNetSalary': round(sum(r['NetSalary'] for r in rows), 2),
+            'Month': str(month_value)[:7] if month_value else None,
+            'EmployeeID': int(employee_id) if employee_id else None,
+        }
+
+        if export_format == 'csv':
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(['Ma NV', 'Ho va ten', 'Phong ban', 'Chuc vu', 'Thang luong', 'Luong co ban', 'Thuong', 'Khau tru', 'Thuc nhan', 'Trang thai'])
+            for row in rows:
+                writer.writerow([row['EmployeeID'], row['FullName'], row['DepartmentName'], row['PositionName'], row['SalaryMonth'], row['BaseSalary'], row['Bonus'], row['Deductions'], row['NetSalary'], row['Status']])
+            filename = f"bao-cao-luong-{summary['Month'] or 'tat-ca'}"
+            if summary['EmployeeID']:
+                filename += f"-nv-{summary['EmployeeID']}"
+            filename += '.csv'
+            return Response('\ufeff' + output.getvalue(), mimetype='text/csv; charset=utf-8', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+        if export_format == 'pdf':
+            pdf_bytes = build_salary_report_pdf(rows, summary)
+            filename = f"bao-cao-luong-{summary['Month'] or 'tat-ca'}"
+            if summary['EmployeeID']:
+                filename += f"-nv-{summary['EmployeeID']}"
+            filename += '.pdf'
+            return Response(
+                pdf_bytes,
+                mimetype='application/pdf',
+                headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+            )
+
+        return jsonify({'salaries': rows, 'summary': summary}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/employee-anniversary-warning', methods=['GET'])
+@roles_required('Admin', 'Manager')
+def employee_anniversary_warning():
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({'error': 'Lỗi kết nối MySQL'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_attendance_details_table(cursor)
+        cursor.execute("""
+            SELECT
+                e.EmployeeID, e.FullName, e.Status,
+                COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                COALESCE(p.PositionName, 'N/A') AS PositionName,
+                COALESCE(SUM(CASE WHEN ad.Status = 'Đi làm' THEN ad.WorkUnit ELSE 0 END), 0) AS WorkUnits,
+                COALESCE(SUM(CASE WHEN ad.Status = 'Nghỉ phép' THEN 1 ELSE 0 END), 0) AS LeaveDays,
+                COALESCE(MAX(s.BaseSalary), 0) AS BaseSalary
+            FROM employees_payroll e
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            LEFT JOIN attendance_details ad ON e.EmployeeID = ad.EmployeeID
+            LEFT JOIN salaries s ON e.EmployeeID = s.EmployeeID
+            GROUP BY e.EmployeeID, e.FullName, e.Status, d.DepartmentName, p.PositionName
+            ORDER BY e.EmployeeID ASC
+        """)
+        warnings = []
+        for row in cursor.fetchall():
+            total_valid_days = float(row.get('WorkUnits') or 0) + float(row.get('LeaveDays') or 0)
+            suggestion = build_salary_raise_suggestion(total_valid_days, row.get('BaseSalary'))
+            if suggestion['Eligible']:
+                duration = format_seniority_by_work_units(total_valid_days)
+                warnings.append({
+                    'EmployeeID': int(row['EmployeeID']),
+                    'FullName': row.get('FullName'),
+                    'DepartmentName': row.get('DepartmentName'),
+                    'PositionName': row.get('PositionName'),
+                    'Status': row.get('Status'),
+                    'TotalValidDays': round(total_valid_days, 2),
+                    'SeniorityText': duration['text'],
+                    'BaseSalary': float(row.get('BaseSalary') or 0),
+                    'RaiseSuggestion': suggestion,
+                })
+        return jsonify({'warnings': warnings, 'total': len(warnings)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/leave-days-warning', methods=['GET'])
+@roles_required('Admin', 'Manager')
+def leave_days_warning():
+    month_value = request.args.get('month') or datetime.now().strftime('%Y-%m')
+    leave_threshold = int(request.args.get('leave_threshold') or 3)
+    absent_threshold = int(request.args.get('absent_threshold') or 1)
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({'error': 'Lỗi kết nối MySQL'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_attendance_details_table(cursor)
+        cursor.execute("""
+            SELECT
+                e.EmployeeID, e.FullName, e.Status,
+                COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                COALESCE(p.PositionName, 'N/A') AS PositionName,
+                COALESCE(SUM(CASE WHEN ad.Status = 'Nghỉ phép' THEN 1 ELSE 0 END), 0) AS LeaveDays,
+                COALESCE(SUM(CASE WHEN ad.Status = 'Nghỉ không phép' THEN 1 ELSE 0 END), 0) AS UnpaidAbsentDays,
+                COALESCE(SUM(CASE WHEN ad.Status = 'Đi làm' AND ad.WorkUnit > 0 AND ad.WorkUnit < 1 THEN 1 ELSE 0 END), 0) AS ShortDays
+            FROM employees_payroll e
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            LEFT JOIN attendance_details ad ON e.EmployeeID = ad.EmployeeID AND DATE_FORMAT(ad.WorkDate, '%Y-%m') = %s
+            GROUP BY e.EmployeeID, e.FullName, e.Status, d.DepartmentName, p.PositionName
+            HAVING LeaveDays >= %s OR UnpaidAbsentDays >= %s OR ShortDays > 0
+            ORDER BY UnpaidAbsentDays DESC, LeaveDays DESC, ShortDays DESC, e.EmployeeID ASC
+        """, (month_value[:7], leave_threshold, absent_threshold))
+        warnings = []
+        for row in cursor.fetchall():
+            reasons = []
+            if int(row.get('LeaveDays') or 0) >= leave_threshold:
+                reasons.append(f"Nghỉ phép {int(row.get('LeaveDays') or 0)} ngày")
+            if int(row.get('UnpaidAbsentDays') or 0) >= absent_threshold:
+                reasons.append(f"Nghỉ không phép {int(row.get('UnpaidAbsentDays') or 0)} ngày")
+            if int(row.get('ShortDays') or 0) > 0:
+                reasons.append(f"Thiếu công {int(row.get('ShortDays') or 0)} ngày")
+            warnings.append({
+                'EmployeeID': int(row['EmployeeID']),
+                'FullName': row.get('FullName'),
+                'DepartmentName': row.get('DepartmentName'),
+                'PositionName': row.get('PositionName'),
+                'Status': row.get('Status'),
+                'Month': month_value[:7],
+                'LeaveDays': int(row.get('LeaveDays') or 0),
+                'UnpaidAbsentDays': int(row.get('UnpaidAbsentDays') or 0),
+                'ShortDays': int(row.get('ShortDays') or 0),
+                'Reasons': reasons,
+            })
+        return jsonify({'warnings': warnings, 'total': len(warnings), 'month': month_value[:7]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/salary-alerts', methods=['GET'])
+@roles_required('Admin', 'Manager')
+def salary_alerts():
+    month_value = request.args.get('month') or datetime.now().strftime('%Y-%m')
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({'error': 'Lỗi kết nối MySQL'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        alerts = []
+        cursor.execute("""
+            SELECT e.EmployeeID, e.FullName,
+                   COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                   COALESCE(p.PositionName, 'N/A') AS PositionName,
+                   e.Status, s.SalaryID, s.SalaryMonth, s.BaseSalary, s.Bonus, s.Deductions, s.NetSalary
+            FROM employees_payroll e
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            LEFT JOIN salaries s ON e.EmployeeID = s.EmployeeID AND DATE_FORMAT(s.SalaryMonth, '%Y-%m') = %s
+            ORDER BY e.EmployeeID ASC
+        """, (month_value[:7],))
+        for row in cursor.fetchall():
+            base = float(row.get('BaseSalary') or 0)
+            bonus = float(row.get('Bonus') or 0)
+            deductions = float(row.get('Deductions') or 0)
+            net = float(row.get('NetSalary') or 0)
+            expected_net = base + bonus - deductions
+            reasons = []
+            severity = 'medium'
+            if not row.get('SalaryID'):
+                reasons.append('Chưa có bảng lương tháng này')
+                severity = 'high'
+            else:
+                if base <= 0:
+                    reasons.append('Lương cơ bản bằng 0')
+                    severity = 'high'
+                if abs(expected_net - net) > 1:
+                    reasons.append('Thực nhận không khớp lương cơ bản + thưởng - khấu trừ')
+                    severity = 'high'
+                if net < 0:
+                    reasons.append('Thực nhận âm')
+                    severity = 'high'
+                if deductions > base * 0.5 and base > 0:
+                    reasons.append('Khấu trừ vượt 50% lương cơ bản')
+            if reasons:
+                alerts.append({
+                    'EmployeeID': int(row['EmployeeID']),
+                    'FullName': row.get('FullName'),
+                    'DepartmentName': row.get('DepartmentName'),
+                    'PositionName': row.get('PositionName'),
+                    'Status': row.get('Status'),
+                    'Month': month_value[:7],
+                    'SalaryID': row.get('SalaryID'),
+                    'BaseSalary': base,
+                    'Bonus': bonus,
+                    'Deductions': deductions,
+                    'NetSalary': net,
+                    'Severity': severity,
+                    'Reasons': reasons,
+                })
+        return jsonify({'alerts': alerts, 'total': len(alerts), 'month': month_value[:7]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
 

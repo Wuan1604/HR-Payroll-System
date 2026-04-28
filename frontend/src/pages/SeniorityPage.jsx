@@ -218,6 +218,7 @@ export default function SeniorityPage() {
                     <th>Nghỉ không phép</th>
                     <th>Thiếu công</th>
                     <th>Trạng thái</th>
+                    <th>Gợi ý tăng lương</th>
                   </tr>
                 </thead>
 
@@ -238,11 +239,12 @@ export default function SeniorityPage() {
                         <td>{formatNumber(item.TotalAbsentDays)} ngày</td>
                         <td>{formatNumber(item.RecordedShortDays)} ngày</td>
                         <td><span className="seniority-status">{item.Status || 'Chưa có'}</span></td>
+                        <td>{item.SalaryRaiseSuggestion?.Eligible ? <span className="seniority-raise-badge">{item.SalaryRaiseSuggestion.Text}</span> : <span className="seniority-muted">Chưa đủ điều kiện</span>}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="13" className="seniority-empty-row">
+                      <td colSpan="14" className="seniority-empty-row">
                         Chưa có dữ liệu chấm công để tính thâm niên
                       </td>
                     </tr>
