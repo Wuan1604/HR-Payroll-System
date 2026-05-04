@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Save, RotateCcw, Pencil, Trash2 } from '../components/LineIcons'
+import { RefreshCw, Save, RotateCcw, Pencil, Trash2, UserCog } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { createUser, deleteUser, getUsers, updateUser } from '../api/authApi'
@@ -139,7 +139,7 @@ export default function UserManagementPage() {
     <div className="users-page">
       <div className="users-header-card">
         <div>
-          <h2>Quản lý tài khoản truy cập</h2>
+          <h2 className="page-title-with-icon"><UserCog size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý tài khoản truy cập</h2>
           <p>Admin có thể thêm, sửa, xóa tài khoản và phân quyền Admin / Manager / Employee.</p>
         </div>
         <button className="btn" onClick={load} disabled={loading}><RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới</button>

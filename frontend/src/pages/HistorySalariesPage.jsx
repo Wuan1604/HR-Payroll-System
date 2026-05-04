@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, RefreshCw, Search } from '../components/LineIcons'
+import { FileText, RefreshCw, Search, History } from '../components/LineIcons'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import ApiError from '../components/ApiError'
@@ -164,7 +164,7 @@ export default function HistorySalariesPage() {
     <div className="history-salary-page">
       <div className="history-header-card">
         <div>
-          <h2>Lịch sử lương nhân viên</h2>
+          <h2 className="page-title-with-icon"><History size={24} strokeWidth={1.8} aria-hidden="true" /> Lịch sử lương nhân viên</h2>
           <p>Chọn nhân viên để xem toàn bộ lịch sử lương theo từng tháng.</p>
         </div>
 

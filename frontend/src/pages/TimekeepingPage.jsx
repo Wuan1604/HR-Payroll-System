@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Search, Save } from '../components/LineIcons'
+import { RefreshCw, Search, Save, Clock3 } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import {
@@ -168,7 +168,7 @@ export default function TimekeepingPage() {
     <div className="timekeeping-page">
       <div className="timekeeping-header-card">
         <div>
-          <h2>Chấm công nhân viên</h2>
+          <h2 className="page-title-with-icon"><Clock3 size={24} strokeWidth={1.8} aria-hidden="true" /> Chấm công nhân viên</h2>
           <p>
             Chọn nhân viên, nhập giờ vào/giờ ra theo ngày và tổng hợp công theo tháng.
           </p>

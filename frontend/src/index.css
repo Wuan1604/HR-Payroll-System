@@ -89,6 +89,16 @@ p {
   margin: 0;
 }
 
+.page-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-title-with-icon svg {
+  flex: 0 0 auto;
+}
+
 code,
 .counter {
   font-family: var(--mono);

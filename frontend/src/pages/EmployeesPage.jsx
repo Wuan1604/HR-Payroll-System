@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Pencil, Trash2, X, Save } from '../components/LineIcons'
+import { RefreshCw, Pencil, Trash2, X, Save, Users } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getEmployees, deleteEmployee, updateEmployee } from '../api/humanApi'
@@ -62,7 +62,7 @@ export default function EmployeesPage() {
     <div className="employees-page">
       <div className="employees-header card">
         <div>
-          <h2>Danh sách nhân viên</h2>
+          <h2 className="page-title-with-icon"><Users size={24} strokeWidth={1.8} aria-hidden="true" /> Danh sách nhân viên</h2>
           <p>{canManageEmployees ? 'Quản lý, chỉnh sửa và xóa thông tin nhân viên' : 'Xem danh sách nhân viên'}</p>
         </div>
 

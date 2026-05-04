@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Search, X } from '../components/LineIcons'
+import { RefreshCw, Search, X, Medal } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getAttendanceSeniority } from '../api/payrollApi'
@@ -82,7 +82,7 @@ export default function SeniorityPage() {
     <div className="seniority-page">
       <div className="seniority-header-card">
         <div>
-          <h2>{isEmployee ? 'Thâm niên của tôi' : 'Thâm niên làm việc nhân viên'}</h2>
+          <h2 className="page-title-with-icon"><Medal size={24} strokeWidth={1.8} aria-hidden="true" /> {isEmployee ? 'Thâm niên của tôi' : 'Thâm niên làm việc nhân viên'}</h2>
           <p>
             Tính thâm niên theo công đã chấm: tổng công đã làm cộng với ngày nghỉ phép được chấm. Quy đổi 26 công = 1 tháng.
           </p>

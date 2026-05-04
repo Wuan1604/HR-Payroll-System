@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Save } from '../components/LineIcons'
+import { RefreshCw, Save, UserCircle2 } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getMyProfile, updateMyProfile } from '../api/humanApi'
@@ -89,7 +89,7 @@ export default function EmployeeProfilePage() {
     <div className="profile-page">
       <div className="profile-header-card">
         <div>
-          <h2>Thông tin cá nhân</h2>
+          <h2 className="page-title-with-icon"><UserCircle2 size={24} strokeWidth={1.8} aria-hidden="true" /> Thông tin cá nhân</h2>
           <p>Employee có thể xem và cập nhật thông tin cá nhân của chính mình.</p>
         </div>
 

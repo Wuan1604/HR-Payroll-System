@@ -148,7 +148,7 @@ export default function SendSalaryEmailsPage() {
     <div className="mail-page">
       <div className="mail-header-card">
         <div>
-          <h2>Gửi email cho nhân viên</h2>
+          <h2 className="page-title-with-icon"><Send size={24} strokeWidth={1.8} aria-hidden="true" /> Gửi email cho nhân viên</h2>
           <p>
             Chọn nhân viên và loại nội dung cần gửi: thông tin cá nhân, bảng chấm công hoặc bảng lương.
           </p>

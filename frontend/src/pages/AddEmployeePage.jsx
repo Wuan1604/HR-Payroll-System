@@ -98,7 +98,7 @@ export default function AddEmployeePage() {
   <div className="add-employee-page">
     <div className="add-employee-header card">
       <div>
-        <h2>Thêm nhân viên</h2>
+        <h2 className="page-title-with-icon"><UserPlus size={24} strokeWidth={1.8} aria-hidden="true" /> Thêm nhân viên</h2>
         <p>
           Thông tin sẽ được lưu đồng thời vào SSMS và đồng bộ sang hệ thống Payroll.
         </p>

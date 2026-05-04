@@ -56,7 +56,7 @@ export default function DepartmentPage() {
       <div className="department-card">
         <div className="department-header">
           <div>
-            <h2><Building2 size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý phòng ban</h2>
+            <h2 className="page-title-with-icon"><Building2 size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý phòng ban</h2>
             <p>Quản lý danh sách phòng ban đang sử dụng trong hệ thống nhân sự.</p>
           </div>
         </div>

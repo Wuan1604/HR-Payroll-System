@@ -284,7 +284,7 @@ export default function UpdateSalaryPage() {
     <div className="update-salary-page">
       <div className="salary-header-card">
         <div>
-          <h2>Tạo bảng lương hàng tháng</h2>
+          <h2 className="page-title-with-icon"><Calculator size={24} strokeWidth={1.8} aria-hidden="true" /> Tạo bảng lương hàng tháng</h2>
           <p>
             Chọn nhân viên, chọn tháng lương, nhập các khoản tiền và lưu bảng lương.
           </p>

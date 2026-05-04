@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Plus, Save, X, Pencil, Trash2 } from '../components/LineIcons'
+import { RefreshCw, Plus, Save, X, Pencil, Trash2, BriefcaseBusiness } from '../components/LineIcons'
 import { showPositions, addPosition, updatePosition, deletePosition } from '../api/humanApi';
 import Loading from '../components/Loading';
 import ApiError from '../components/ApiError';
@@ -80,7 +80,7 @@ export default function PositionPage() {
     <div className="position-page">
       <div className="position-header card">
         <div>
-          <h2>Quản lý Chức vụ</h2>
+          <h2 className="page-title-with-icon"><BriefcaseBusiness size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý Chức vụ</h2>
           <p>Dữ liệu được quản lý tại SQL Server và đồng bộ sang MySQL.</p>
         </div>
 

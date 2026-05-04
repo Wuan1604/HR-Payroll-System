@@ -174,7 +174,7 @@ export default function BaseSalaryPage() {
     <div className="base-salary-page">
       <div className="base-salary-header-card">
         <div>
-          <h2><Wallet size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý lương cơ bản</h2>
+          <h2 className="page-title-with-icon"><Wallet size={24} strokeWidth={1.8} aria-hidden="true" /> Quản lý lương cơ bản</h2>
           <p>
             Lưu mức lương cơ bản riêng cho từng nhân viên. Khi tạo bảng lương, hệ thống sẽ tự điền mức lương này sau khi chọn nhân viên.
           </p>

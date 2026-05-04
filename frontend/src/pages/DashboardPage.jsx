@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw } from '../components/LineIcons'
+import { RefreshCw, LayoutDashboard } from '../components/LineIcons'
 import Loading from '../components/Loading'
 import ApiError from '../components/ApiError'
 import { getEmployees, getReportHuman } from '../api/humanApi'
@@ -390,7 +390,7 @@ export default function DashboardPage() {
       <div className="dashboard-hero">
         <div>
           <p className="dashboard-kicker">HR & Payroll analytics</p>
-          <h2>Tổng quan hệ thống</h2>
+          <h2 className="page-title-with-icon"><LayoutDashboard size={24} strokeWidth={1.8} aria-hidden="true" /> Tổng quan hệ thống</h2>
           <p>Theo dõi nhanh tình hình nhân sự, lương, chấm công và các cảnh báo quan trọng.</p>
         </div>
         <button className="dashboard-refresh" onClick={load} disabled={loading}>

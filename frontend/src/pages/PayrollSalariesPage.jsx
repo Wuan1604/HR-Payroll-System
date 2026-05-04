@@ -143,7 +143,7 @@ export default function PayrollSalariesPage() {
     <div className="payroll-page">
       <div className="payroll-header-card">
         <div>
-          <h2>Bảng lương</h2>
+          <h2 className="page-title-with-icon"><FileText size={24} strokeWidth={1.8} aria-hidden="true" /> Bảng lương</h2>
           <p>
             Theo dõi bảng lương nhân viên theo từng tháng.
           </p>
