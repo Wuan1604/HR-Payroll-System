@@ -90,9 +90,9 @@ function Sidebar() {
         <RoleLink to="/show-human" roles={ADMIN} icon={BriefcaseBusiness}>Chức vụ</RoleLink>
 
         <div className="sidebar__section">Quản lý Tiền lương</div>
+        <RoleLink to="/base-salaries" roles={ADMIN_MANAGER} icon={Wallet}>Lương cơ bản</RoleLink>
         <RoleLink to="/show-salaries" roles={ADMIN_MANAGER} icon={Wallet}>Bảng lương</RoleLink>
         <RoleLink to="/show-salaries" roles={['Employee']} icon={Wallet}>Lương của tôi</RoleLink>
-        <RoleLink to="/base-salaries" roles={ADMIN_MANAGER} icon={Wallet}>Lương cơ bản</RoleLink>
         <RoleLink to="/update-salary" roles={ADMIN_MANAGER} icon={FileSpreadsheet}>Tạo bảng lương</RoleLink>
         <RoleLink to="/history-salaries" roles={ADMIN_MANAGER} icon={History}>Báo cáo và lịch sử lương</RoleLink>
         <RoleLink to="/history-salaries" roles={['Employee']} icon={History}>Lịch sử lương của tôi</RoleLink>
