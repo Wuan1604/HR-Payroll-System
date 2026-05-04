@@ -1,0 +1,444 @@
+.base-salary-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.base-salary-header-card,
+.base-salary-form-card,
+.base-salary-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.base-salary-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 24px;
+}
+
+.base-salary-header-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.base-salary-header-card p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.base-salary-form-card,
+.base-salary-table-card {
+  padding: 22px;
+}
+
+.base-salary-form-title,
+.base-salary-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.base-salary-form-title h3,
+.base-salary-toolbar h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.base-salary-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.4fr) minmax(200px, 1fr) minmax(200px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.base-salary-grid label,
+.base-salary-note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.base-salary-grid label > span,
+.base-salary-note-field > span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.base-salary-grid input,
+.base-salary-note-field textarea,
+.base-salary-search input {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: 0.2s ease;
+  box-sizing: border-box;
+}
+
+.base-salary-grid input,
+.base-salary-search input {
+  height: 44px;
+  padding: 0 13px;
+}
+
+.base-salary-note-field textarea {
+  min-height: 78px;
+  resize: vertical;
+  padding: 12px 13px;
+  line-height: 1.5;
+}
+
+.base-salary-grid input:focus,
+.base-salary-note-field textarea:focus,
+.base-salary-search input:focus {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+}
+
+.base-salary-employee-field {
+  position: relative;
+}
+
+.base-salary-autocomplete {
+  position: relative;
+}
+
+.base-salary-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+  padding: 6px;
+}
+
+.base-salary-suggestions button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.base-salary-suggestions button:hover {
+  background: #f8fafc;
+}
+
+.base-salary-suggestions strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.base-salary-suggestions span,
+.base-salary-suggestion-empty {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.base-salary-suggestion-empty {
+  padding: 10px 12px;
+}
+
+.base-salary-employee-box {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.base-salary-employee-box div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.base-salary-employee-box span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.base-salary-employee-box strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.base-salary-note-field {
+  margin-top: 14px;
+}
+
+.base-salary-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.base-salary-header-card .btn,
+.base-salary-form-actions .btn,
+.base-salary-clear-btn {
+  border: none;
+  outline: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.base-salary-header-card .btn,
+.base-salary-form-actions .btn {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.base-salary-clear-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.base-salary-header-card .btn:hover,
+.base-salary-form-actions .btn:hover,
+.base-salary-clear-btn:hover {
+  transform: translateY(-1px);
+}
+
+.base-salary-header-card .btn:hover,
+.base-salary-form-actions .btn:hover {
+  background: #1e293b;
+}
+
+.base-salary-clear-btn:hover {
+  background: #e2e8f0;
+}
+
+.base-salary-header-card .btn:disabled,
+.base-salary-form-actions .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.base-salary-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 320px;
+  color: #64748b;
+}
+
+.base-salary-search svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+
+.base-salary-search input {
+  padding-left: 38px;
+}
+
+.base-salary-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.base-salary-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+  color: #334155;
+  font-size: 14px;
+}
+
+.base-salary-table thead {
+  background: #f8fafc;
+}
+
+.base-salary-table th {
+  padding: 14px 16px;
+  text-align: left;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.base-salary-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf2f7;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.base-salary-table tbody tr {
+  transition: 0.2s ease;
+}
+
+.base-salary-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.base-salary-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.base-salary-table td strong {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.row-missing-salary td {
+  color: #64748b;
+}
+
+.base-salary-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.base-salary-actions button {
+  min-height: 34px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.2s ease;
+}
+
+.base-salary-actions button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.base-salary-actions .danger {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.base-salary-actions .danger:hover {
+  background: #fef2f2;
+}
+
+.base-salary-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.base-salary-message {
+  padding: 12px 14px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.empty-cell {
+  text-align: center !important;
+  color: #64748b !important;
+  padding: 24px !important;
+}
+
+@media (max-width: 900px) {
+  .base-salary-grid,
+  .base-salary-employee-box {
+    grid-template-columns: 1fr;
+  }
+
+  .base-salary-search {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* UI polish: remove unnecessary inner scrollbars and keep the page consistent */
+.base-salary-suggestions {
+  max-height: none;
+  overflow: visible;
+}
+
+.base-salary-table-wrap {
+  overflow-x: visible;
+}
+
+.base-salary-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.base-salary-table th,
+.base-salary-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.base-salary-table th:last-child,
+.base-salary-table td:last-child {
+  width: 150px;
+}
+
+.base-salary-note-field textarea {
+  resize: none;
+  overflow: hidden;
+}
+
+.base-salary-grid input[type='text']::-webkit-outer-spin-button,
+.base-salary-grid input[type='text']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Search, X } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getAttendanceSeniority } from '../api/payrollApi'
@@ -6,7 +7,7 @@ import { getRole } from '../utils/auth'
 import '../styles/SeniorityPage.css'
 
 function formatNumber(value) {
-  return Number(value || 0).toLocaleString('vi-VN')
+  return Number(value || 0).toLocaleString('en-US')
 }
 
 function formatDate(value) {
@@ -88,7 +89,7 @@ export default function SeniorityPage() {
         </div>
 
         <button className="seniority-refresh-btn" onClick={() => load()} disabled={loading}>
-          {loading ? 'Đang tải...' : 'Làm mới'}
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> {loading ? 'Đang tải...' : 'Làm mới'}
         </button>
       </div>
 
@@ -115,7 +116,7 @@ export default function SeniorityPage() {
               </label>
 
               <label className="seniority-field search-field">
-                <span>Tìm kiếm trong danh sách</span>
+                <span><Search size={16} strokeWidth={1.8} aria-hidden="true" /> Tìm kiếm trong danh sách</span>
                 <input
                   type="text"
                   value={search}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { RefreshCw, Save } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getMyProfile, updateMyProfile } from '../api/humanApi'
@@ -93,7 +94,7 @@ export default function EmployeeProfilePage() {
         </div>
 
         <button className="profile-refresh-btn" onClick={loadProfile} disabled={loading || saving}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -176,7 +177,7 @@ export default function EmployeeProfilePage() {
 
             <div className="profile-actions">
               <button className="profile-save-btn" type="submit" disabled={saving}>
-                {saving ? 'Đang lưu...' : 'Lưu thông tin'}
+                <Save size={16} strokeWidth={1.8} aria-hidden="true" /> {saving ? 'Đang lưu...' : 'Lưu thông tin'}
               </button>
             </div>
 

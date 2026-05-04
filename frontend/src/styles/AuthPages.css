@@ -96,3 +96,39 @@
   color: #64748b;
   line-height: 1.5;
 }
+
+
+.auth-success {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #047857;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.auth-hint--split {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-hint a {
+  color: #3730a3;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-hint a:hover {
+  text-decoration: underline;
+}
+
+.auth-card button,
+.auth-hint a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

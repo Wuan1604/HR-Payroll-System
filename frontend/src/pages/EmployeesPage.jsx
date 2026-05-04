@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { RefreshCw, Pencil, Trash2, X, Save } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getEmployees, deleteEmployee, updateEmployee } from '../api/humanApi'
@@ -66,7 +67,7 @@ export default function EmployeesPage() {
         </div>
 
         <button className="btn-refresh" onClick={load} disabled={loading}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -103,10 +104,10 @@ export default function EmployeesPage() {
                     <td>
                       <div className="action-buttons">
                         <button className="btn-edit" onClick={() => handleEdit(emp)}>
-                          Sửa
+                          <Pencil size={15} strokeWidth={1.8} aria-hidden="true" /> Sửa
                         </button>
                         <button className="btn-delete" onClick={() => handleDelete(emp.EmployeeID)}>
-                          Xóa
+                          <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" /> Xóa
                         </button>
                       </div>
                     </td>
@@ -132,7 +133,7 @@ export default function EmployeesPage() {
             <div className="modal-header">
               <h3>Sửa nhân viên</h3>
               <button className="modal-close" onClick={() => setEditingEmployee(null)}>
-                ×
+                <X size={18} strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
 
@@ -183,10 +184,10 @@ export default function EmployeesPage() {
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setEditingEmployee(null)}>
-                Hủy
+                <X size={15} strokeWidth={1.8} aria-hidden="true" /> Hủy
               </button>
               <button className="btn-save" onClick={handleUpdate}>
-                Lưu thay đổi
+                <Save size={15} strokeWidth={1.8} aria-hidden="true" /> Lưu thay đổi
               </button>
             </div>
           </div>

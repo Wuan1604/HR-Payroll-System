@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw, Plus, Save, X, Pencil, Trash2 } from '../components/LineIcons'
 import { showPositions, addPosition, updatePosition, deletePosition } from '../api/humanApi';
 import Loading from '../components/Loading';
 import ApiError from '../components/ApiError';
@@ -84,7 +85,7 @@ export default function PositionPage() {
         </div>
 
         <button className="btn-refresh-position" onClick={loadData} disabled={loading}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -99,7 +100,7 @@ export default function PositionPage() {
         />
 
         <button className="btn-add-position" type="submit" disabled={loading}>
-          Thêm chức vụ
+          <Plus size={16} strokeWidth={1.8} aria-hidden="true" /> Thêm chức vụ
         </button>
       </form>
 
@@ -143,7 +144,7 @@ export default function PositionPage() {
                             type="button"
                             onClick={() => handleUpdate(pos.PositionID)}
                           >
-                            Lưu
+                            <Save size={15} strokeWidth={1.8} aria-hidden="true" /> Lưu
                           </button>
 
                           <button
@@ -151,7 +152,7 @@ export default function PositionPage() {
                             type="button"
                             onClick={handleCancelEdit}
                           >
-                            Hủy
+                            <X size={15} strokeWidth={1.8} aria-hidden="true" /> Hủy
                           </button>
                         </>
                       ) : (
@@ -164,7 +165,7 @@ export default function PositionPage() {
                               setEditName(pos.PositionName);
                             }}
                           >
-                            Sửa
+                            <Pencil size={15} strokeWidth={1.8} aria-hidden="true" /> Sửa
                           </button>
 
                           <button
@@ -172,7 +173,7 @@ export default function PositionPage() {
                             type="button"
                             onClick={() => handleDelete(pos.PositionID)}
                           >
-                            Xóa
+                            <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" /> Xóa
                           </button>
                         </>
                       )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { RefreshCw, Save, RotateCcw, Pencil, Trash2 } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { createUser, deleteUser, getUsers, updateUser } from '../api/authApi'
@@ -141,7 +142,7 @@ export default function UserManagementPage() {
           <h2>Quản lý tài khoản truy cập</h2>
           <p>Admin có thể thêm, sửa, xóa tài khoản và phân quyền Admin / Manager / Employee.</p>
         </div>
-        <button className="btn" onClick={load} disabled={loading}>Làm mới</button>
+        <button className="btn" onClick={load} disabled={loading}><RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới</button>
       </div>
 
       {loading ? <Loading /> : null}
@@ -213,11 +214,11 @@ export default function UserManagementPage() {
 
             <div className="users-form-actions">
               <button className="btn" type="submit" disabled={saving}>
-                {saving ? 'Đang lưu...' : form.UserID ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+                <Save size={16} strokeWidth={1.8} aria-hidden="true" /> {saving ? 'Đang lưu...' : form.UserID ? 'Lưu thay đổi' : 'Tạo tài khoản'}
               </button>
 
               {form.UserID ? (
-                <button type="button" className="btn-secondary" onClick={() => setForm(emptyForm)}>
+                <button type="button" className="btn-secondary" onClick={() => setForm(emptyForm)}><RotateCcw size={16} strokeWidth={1.8} aria-hidden="true" /> 
                   Hủy sửa
                 </button>
               ) : null}
@@ -270,8 +271,8 @@ export default function UserManagementPage() {
                         <td>{u.LastLogin || 'Chưa có'}</td>
                         <td>
                           <div className="users-actions">
-                            <button onClick={() => editUser(u)}>Sửa</button>
-                            <button className="danger" onClick={() => handleDelete(u.UserID)}>Xóa</button>
+                            <button onClick={() => editUser(u)}><Pencil size={15} strokeWidth={1.8} aria-hidden="true" /> Sửa</button>
+                            <button className="danger" onClick={() => handleDelete(u.UserID)}><Trash2 size={15} strokeWidth={1.8} aria-hidden="true" /> Xóa</button>
                           </div>
                         </td>
                       </tr>

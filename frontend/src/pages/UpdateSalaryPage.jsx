@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Calculator, Save } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
-import { getAttendanceSummary, getSalaries, updateSalary } from '../api/payrollApi'
+import { getAttendanceSummary, getBaseSalaries, getSalaries, updateSalary } from '../api/payrollApi'
+import { formatMoney, formatNumberWithCommas, parseMoneyInput } from '../utils/money'
 import '../styles/UpdateSalaryPage.css'
-
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' VNĐ'
-}
 
 function normalizeDate(value) {
   if (!value) return ''
@@ -34,6 +32,7 @@ export default function UpdateSalaryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
+  const [baseSalaryRows, setBaseSalaryRows] = useState([])
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -52,12 +51,17 @@ export default function UpdateSalaryPage() {
     setError(null)
 
     try {
-      const res = await getSalaries()
-      const arr = Array.isArray(res) ? res : []
+      const [salaryRes, baseRes] = await Promise.all([getSalaries(), getBaseSalaries()])
+      const arr = Array.isArray(salaryRes) ? salaryRes : []
+      const baseArr = Array.isArray(baseRes) ? baseRes : []
       setRows(arr)
+      setBaseSalaryRows(baseArr)
 
       if (arr.length > 0 && !selectedEmployeeId) {
-        setSelectedEmployeeId(String(arr[0].EmployeeID))
+        const firstEmployeeId = String(arr[0].EmployeeID)
+        setSelectedEmployeeId(firstEmployeeId)
+        const defaultSalary = baseArr.find((item) => String(item.EmployeeID) === firstEmployeeId)?.BaseSalary || arr[0].DefaultBaseSalary || ''
+        setForm((prev) => ({ ...prev, BaseSalary: defaultSalary || '' }))
       }
     } catch (e) {
       setError(e)
@@ -82,12 +86,32 @@ export default function UpdateSalaryPage() {
           DepartmentName: item.DepartmentName,
           PositionName: item.PositionName,
           Status: item.Status,
+          DefaultBaseSalary: item.DefaultBaseSalary || 0,
+          DefaultBaseSalaryEffectiveDate: item.DefaultBaseSalaryEffectiveDate || null,
+        })
+      }
+    })
+
+    baseSalaryRows.forEach((item) => {
+      const existing = map.get(item.EmployeeID)
+      if (existing) {
+        existing.DefaultBaseSalary = item.BaseSalary || 0
+        existing.DefaultBaseSalaryEffectiveDate = item.EffectiveDate || null
+      } else {
+        map.set(item.EmployeeID, {
+          EmployeeID: item.EmployeeID,
+          FullName: item.FullName,
+          DepartmentName: item.DepartmentName,
+          PositionName: item.PositionName,
+          Status: item.Status,
+          DefaultBaseSalary: item.BaseSalary || 0,
+          DefaultBaseSalaryEffectiveDate: item.EffectiveDate || null,
         })
       }
     })
 
     return Array.from(map.values())
-  }, [rows])
+  }, [rows, baseSalaryRows])
 
   const selectedEmployee = useMemo(() => {
     return employees.find(
@@ -154,13 +178,18 @@ export default function UpdateSalaryPage() {
       })
       loadAttendanceSuggestion(employeeId, monthValue, oldSalary.BaseSalary ?? 0)
     } else {
+      const defaultBaseSalary =
+        baseSalaryRows.find((item) => String(item.EmployeeID) === String(employeeId))?.BaseSalary ??
+        rows.find((item) => String(item.EmployeeID) === String(employeeId))?.DefaultBaseSalary ??
+        ''
+
       setForm({
         SalaryMonth: monthValue,
-        BaseSalary: '',
+        BaseSalary: defaultBaseSalary || '',
         Bonus: '',
         Deductions: '',
       })
-      loadAttendanceSuggestion(employeeId, monthValue, 0)
+      loadAttendanceSuggestion(employeeId, monthValue, defaultBaseSalary || 0)
     }
   }
 
@@ -179,10 +208,11 @@ export default function UpdateSalaryPage() {
 
   function handleChange(e) {
     const { name, value } = e.target
+    const moneyFields = ['BaseSalary', 'Bonus', 'Deductions']
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: moneyFields.includes(name) ? parseMoneyInput(value) : value,
     }))
 
     setMessage('')
@@ -261,7 +291,7 @@ export default function UpdateSalaryPage() {
         </div>
 
         <button className="btn salary-refresh-btn" onClick={load} disabled={loading || saving}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -319,6 +349,10 @@ export default function UpdateSalaryPage() {
                   <span>Trạng thái</span>
                   <strong>{selectedEmployee.Status || 'Chưa có'}</strong>
                 </div>
+                <div>
+                  <span>Lương cơ bản đang lưu</span>
+                  <strong>{selectedEmployee.DefaultBaseSalary ? formatMoney(selectedEmployee.DefaultBaseSalary) : 'Chưa nhập'}</strong>
+                </div>
               </div>
             ) : null}
 
@@ -360,7 +394,7 @@ export default function UpdateSalaryPage() {
                 onClick={refreshAttendanceDeduction}
                 disabled={loadingAttendance || !selectedEmployeeId}
               >
-                {loadingAttendance ? 'Đang tính...' : 'Tính lại từ chấm công'}
+                <Calculator size={16} strokeWidth={1.8} aria-hidden="true" /> {loadingAttendance ? 'Đang tính...' : 'Tính lại từ chấm công'}
               </button>
 
               <button
@@ -369,7 +403,7 @@ export default function UpdateSalaryPage() {
                 onClick={applySuggestedDeduction}
                 disabled={!selectedEmployeeId}
               >
-                Áp dụng khấu trừ đề xuất
+                <Calculator size={16} strokeWidth={1.8} aria-hidden="true" /> Áp dụng khấu trừ đề xuất
               </button>
             </div>
           </div>
@@ -381,21 +415,26 @@ export default function UpdateSalaryPage() {
               <label className="salary-field">
                 <span>Lương cơ bản</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="BaseSalary"
-                  value={form.BaseSalary}
+                  value={formatNumberWithCommas(form.BaseSalary)}
                   onChange={handleChange}
                   onBlur={refreshAttendanceDeduction}
                   placeholder="Nhập lương cơ bản"
                 />
+                {!selectedSalary && selectedEmployee?.DefaultBaseSalary ? (
+                  <small className="salary-field-note">Đã tự điền từ lương cơ bản đang lưu.</small>
+                ) : null}
               </label>
 
               <label className="salary-field">
                 <span>Thưởng</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="Bonus"
-                  value={form.Bonus}
+                  value={formatNumberWithCommas(form.Bonus)}
                   onChange={handleChange}
                   placeholder="Nhập tiền thưởng"
                 />
@@ -404,9 +443,10 @@ export default function UpdateSalaryPage() {
               <label className="salary-field">
                 <span>Khấu trừ</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="Deductions"
-                  value={form.Deductions}
+                  value={formatNumberWithCommas(form.Deductions)}
                   onChange={handleChange}
                   placeholder="Nhập tiền khấu trừ"
                 />
@@ -421,7 +461,7 @@ export default function UpdateSalaryPage() {
             </div>
 
             <button className="btn salary-save-btn" type="submit" disabled={saving || !selectedEmployee}>
-              {saving ? 'Đang lưu...' : selectedSalary ? 'Cập nhật bảng lương' : 'Tạo bảng lương'}
+              <Save size={16} strokeWidth={1.8} aria-hidden="true" /> {saving ? 'Đang lưu...' : selectedSalary ? 'Cập nhật bảng lương' : 'Tạo bảng lương'}
             </button>
           </div>
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { UserRoundPlus, LogIn } from '../components/LineIcons'
 import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../api/authApi'
 import '../styles/AuthPages.css'
@@ -43,8 +44,8 @@ export default function RegisterPage() {
         <label><span>Email</span><input name="Email" value={form.Email} onChange={change} required /></label>
         <label><span>Username</span><input name="Username" value={form.Username} onChange={change} required /></label>
         <label><span>Mật khẩu</span><input name="Password" type="password" value={form.Password} onChange={change} required /></label>
-        <button type="submit" disabled={loading}>{loading ? 'Đang đăng ký...' : 'Đăng ký'}</button>
-        <div className="auth-hint">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></div>
+        <button type="submit" disabled={loading}><UserRoundPlus size={18} strokeWidth={1.8} aria-hidden="true" /> {loading ? 'Đang đăng ký...' : 'Đăng ký'}</button>
+        <div className="auth-hint">Đã có tài khoản? <Link to="/login"><LogIn size={15} strokeWidth={1.8} aria-hidden="true" /> Đăng nhập</Link></div>
       </form>
     </div>
   )

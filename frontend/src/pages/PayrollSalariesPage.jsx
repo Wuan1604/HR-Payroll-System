@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FileText, RefreshCw, X } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getSalaries, downloadSalaryReport } from '../api/payrollApi'
 import '../styles/PayrollSalariesPage.css'
 
 function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' VNĐ'
+  return Number(value || 0).toLocaleString('en-US') + ' VNĐ'
 }
 
 function formatDate(value) {
@@ -149,7 +150,7 @@ export default function PayrollSalariesPage() {
         </div>
 
         <button className="payroll-refresh-btn" onClick={load} disabled={loading}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -204,7 +205,7 @@ export default function PayrollSalariesPage() {
               onClick={() => handleExportSalaryReport('pdf')}
               disabled={exporting}
             >
-              {exporting ? 'Đang xuất...' : 'Xuất PDF bảng lương'}
+              <FileText size={16} strokeWidth={1.8} aria-hidden="true" /> {exporting ? 'Đang xuất...' : 'Xuất PDF bảng lương'}
             </button>
 
             <button
@@ -212,7 +213,7 @@ export default function PayrollSalariesPage() {
               type="button"
               onClick={() => setSelectedMonth('')}
             >
-              Xem tất cả
+              <X size={15} strokeWidth={1.8} aria-hidden="true" /> Xem tất cả
             </button>
           </div>
 

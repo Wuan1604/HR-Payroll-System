@@ -213,3 +213,37 @@
         justify-content: flex-start;
     }
 }
+/* Light cards for consistency with the current system style */
+.position-header.card,
+.position-add-form.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+
+.position-header h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.position-header p {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.position-add-form.card {
+  align-items: center;
+}
+
+.position-table-wrapper {
+  overflow-x: hidden;
+}
+
+.position-input {
+  min-width: 0;
+}

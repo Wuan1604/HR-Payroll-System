@@ -49,3 +49,18 @@ export function register(payload) {
     body: JSON.stringify(payload),
   })
 }
+
+
+export function forgotPassword(payload) {
+  return apiFetch('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function resetPassword(payload) {
+  return apiFetch('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { FileText, RefreshCw, Search } from '../components/LineIcons'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import ApiError from '../components/ApiError'
@@ -7,7 +8,7 @@ import { getSalaries, historySalaries } from '../api/payrollApi'
 import '../styles/HistorySalariesPage.css'
 
 function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' VNĐ'
+  return Number(value || 0).toLocaleString('en-US') + ' VNĐ'
 }
 
 function formatDate(value) {
@@ -173,7 +174,7 @@ export default function HistorySalariesPage() {
             onClick={exportSalaryHistoryPDF}
             disabled={exportingPdf || loadingHistory || !employee || history.length === 0}
           >
-            {exportingPdf ? 'Đang xuất PDF...' : 'Xuất PDF'}
+            <FileText size={16} strokeWidth={1.8} aria-hidden="true" /> {exportingPdf ? 'Đang xuất PDF...' : 'Xuất PDF'}
           </button>
 
           <button
@@ -181,7 +182,7 @@ export default function HistorySalariesPage() {
             onClick={() => loadHistory(selectedEmployeeID)}
             disabled={loadingHistory || !selectedEmployeeID}
           >
-            {loadingHistory ? 'Đang tải...' : 'Làm mới'}
+            <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> {loadingHistory ? 'Đang tải...' : 'Làm mới'}
           </button>
         </div>
       </div>
@@ -217,7 +218,7 @@ export default function HistorySalariesPage() {
             onClick={() => loadHistory(selectedEmployeeID)}
             disabled={loadingHistory || !selectedEmployeeID}
           >
-            {loadingHistory ? 'Đang tải...' : 'Xem lịch sử'}
+            <Search size={16} strokeWidth={1.8} aria-hidden="true" /> {loadingHistory ? 'Đang tải...' : 'Xem lịch sử'}
           </button>
         </div>
       ) : null}

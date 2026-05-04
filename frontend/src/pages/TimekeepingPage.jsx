@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Search, Save } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import {
@@ -6,6 +7,7 @@ import {
   getAttendanceEmployees,
   saveAttendanceCheck,
 } from '../api/payrollApi'
+import { formatMoney, formatNumberWithCommas, parseMoneyInput } from '../utils/money'
 import '../styles/TimekeepingPage.css'
 import { getRole } from '../utils/auth'
 
@@ -18,17 +20,13 @@ function getCurrentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' VNĐ'
-}
-
 function formatDate(value) {
   if (!value) return 'Chưa có'
   return String(value).slice(0, 10)
 }
 
 function formatNumber(value) {
-  return Number(value || 0).toLocaleString('vi-VN')
+  return Number(value || 0).toLocaleString('en-US')
 }
 
 export default function TimekeepingPage() {
@@ -181,7 +179,7 @@ export default function TimekeepingPage() {
           onClick={() => loadDetails()}
           disabled={loadingDetails || !selectedEmployeeId}
         >
-          {loadingDetails ? 'Đang tải...' : 'Làm mới'}
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> {loadingDetails ? 'Đang tải...' : 'Làm mới'}
         </button>
       </div>
 
@@ -221,11 +219,12 @@ export default function TimekeepingPage() {
             <label className="timekeeping-field small">
               <span>Lương cơ bản để tính khấu trừ</span>
               <input
-                type="number"
-                value={baseSalary}
-                onChange={(e) => setBaseSalary(e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={formatNumberWithCommas(baseSalary)}
+                onChange={(e) => setBaseSalary(parseMoneyInput(e.target.value))}
                 onBlur={() => loadDetails(selectedEmployeeId, selectedMonth, baseSalary)}
-                placeholder="Ví dụ: 12000000"
+                placeholder="Ví dụ: 12,000,000"
               />
             </label>
 
@@ -235,7 +234,7 @@ export default function TimekeepingPage() {
               onClick={() => loadDetails(selectedEmployeeId, selectedMonth, baseSalary)}
               disabled={loadingDetails || !selectedEmployeeId}
             >
-              Xem tổng hợp
+              <Search size={16} strokeWidth={1.8} aria-hidden="true" /> Xem tổng hợp
             </button>
           </div>
 
@@ -334,7 +333,7 @@ export default function TimekeepingPage() {
               </div>
 
               <button className="timekeeping-save-btn" type="submit" disabled={saving || !selectedEmployeeId}>
-                {saving ? 'Đang lưu...' : 'Lưu chấm công'}
+                <Save size={16} strokeWidth={1.8} aria-hidden="true" /> {saving ? 'Đang lưu...' : 'Lưu chấm công'}
               </button>
             </div>
 

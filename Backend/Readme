@@ -17,3 +17,23 @@ Hr-Payroll-BE/
 Tài khoản test
 username: admin123
 password: 1
+
+## Chức năng quên mật khẩu
+
+Luồng hoạt động:
+1. Người dùng bấm "Quên mật khẩu?" ở màn hình đăng nhập.
+2. Người dùng nhập email tài khoản.
+3. Backend tạo token bảo mật, lưu dạng SHA-256 trong bảng `password_reset_tokens` và gửi link đặt lại qua Gmail.
+4. Người dùng mở link `/reset-password?token=...` và nhập mật khẩu mới.
+5. Backend kiểm tra token còn hạn/chưa dùng, cập nhật `users.PasswordHash`, sau đó đánh dấu token đã dùng.
+
+Cấu hình cần có trong file `.env`:
+
+```env
+FRONTEND_URL=http://localhost:5173
+PASSWORD_RESET_EXPIRES_MINUTES=30
+SENDER_EMAIL=your_email@gmail.com
+SENDER_PASSWORD=your_gmail_app_password
+```
+
+Nếu database `hr_auth` đã tồn tại trước đó, hãy chạy thêm phần tạo bảng `password_reset_tokens` trong `Backend/sql_scripts/hr_auth.sql`.

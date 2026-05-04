@@ -1,7 +1,14 @@
 import bcrypt
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+from urllib.parse import quote
+
 from flask import Blueprint, jsonify, request, make_response
 from app.database import get_auth_connection
 from app.auth import generate_token, login_required, roles_required, get_current_user
+from app.config import Config
+from app.utils import send_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,6 +31,49 @@ def _check_password(stored_password, raw_password):
 
 def _hash_password(raw_password):
     return bcrypt.hashpw(str(raw_password).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def _hash_reset_token(raw_token):
+    return hashlib.sha256(str(raw_token).encode('utf-8')).hexdigest()
+
+
+def _ensure_password_reset_table(cursor):
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            TokenID INT AUTO_INCREMENT PRIMARY KEY,
+            UserID INT NOT NULL,
+            TokenHash VARCHAR(64) NOT NULL UNIQUE,
+            ExpiresAt DATETIME NOT NULL,
+            UsedAt DATETIME NULL,
+            CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_password_reset_user
+                FOREIGN KEY (UserID) REFERENCES users(UserID)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        )
+        """
+    )
+
+
+def _build_reset_email(full_name, reset_link, expires_minutes):
+    safe_name = full_name or 'bạn'
+    return f"""
+    <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; color: #0f172a;">
+      <h2 style="margin-bottom: 8px;">Đặt lại mật khẩu HR & Payroll</h2>
+      <p>Xin chào <b>{safe_name}</b>,</p>
+      <p>Hệ thống nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+      <p>Vui lòng bấm nút bên dưới để tạo mật khẩu mới. Liên kết này có hiệu lực trong <b>{expires_minutes} phút</b>.</p>
+      <p style="margin: 28px 0;">
+        <a href="{reset_link}" style="background:#0f172a;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;display:inline-block;">
+          Đặt lại mật khẩu
+        </a>
+      </p>
+      <p>Nếu nút không hoạt động, bạn có thể sao chép liên kết này vào trình duyệt:</p>
+      <p style="word-break:break-all;background:#f1f5f9;padding:12px;border-radius:10px;">{reset_link}</p>
+      <p style="color:#64748b;font-size:13px;">Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>
+    </div>
+    """
 
 
 def _log_login(cursor, user_id, email, status, message):
@@ -153,6 +203,141 @@ def register():
         )
         conn.commit()
         return jsonify({'message': 'Đăng ký tài khoản thành công. Bạn có thể đăng nhập ngay.', 'UserID': cursor.lastrowid}), 201
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.json or {}
+    account = (data.get('email') or data.get('Email') or data.get('account') or '').strip()
+
+    if not account:
+        return jsonify({'error': 'Vui lòng nhập email tài khoản'}), 400
+
+    # Không tiết lộ email có tồn tại hay không để tránh dò tài khoản.
+    generic_message = 'Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi.'
+
+    conn = get_auth_connection()
+    if not conn:
+        return jsonify({'error': 'Không thể kết nối database đăng nhập'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        _ensure_password_reset_table(cursor)
+        cursor.execute(
+            """
+            SELECT UserID, FullName, Email, Status
+            FROM users
+            WHERE Email = %s
+            LIMIT 1
+            """,
+            (account,)
+        )
+        user = cursor.fetchone()
+
+        if not user or user.get('Status') != 'Active':
+            conn.commit()
+            return jsonify({'message': generic_message}), 200
+
+        raw_token = secrets.token_urlsafe(48)
+        token_hash = _hash_reset_token(raw_token)
+        expires_minutes = int(getattr(Config, 'PASSWORD_RESET_EXPIRES_MINUTES', 30))
+        expires_at = datetime.now() + timedelta(minutes=expires_minutes)
+
+        cursor.execute(
+            """
+            UPDATE password_reset_tokens
+            SET UsedAt = NOW()
+            WHERE UserID = %s AND UsedAt IS NULL
+            """,
+            (user['UserID'],)
+        )
+        cursor.execute(
+            """
+            INSERT INTO password_reset_tokens (UserID, TokenHash, ExpiresAt)
+            VALUES (%s, %s, %s)
+            """,
+            (user['UserID'], token_hash, expires_at)
+        )
+        conn.commit()
+
+        frontend_url = (Config.FRONTEND_URL or 'http://localhost:5173').rstrip('/')
+        reset_link = f"{frontend_url}/reset-password?token={quote(raw_token)}"
+        html = _build_reset_email(user.get('FullName'), reset_link, expires_minutes)
+        sent = send_email(user['Email'], 'Đặt lại mật khẩu HR & Payroll', html)
+        if not sent:
+            return jsonify({'error': 'Không thể gửi email đặt lại mật khẩu. Vui lòng kiểm tra cấu hình Gmail.'}), 500
+
+        return jsonify({'message': generic_message}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json or {}
+    token = (data.get('token') or data.get('Token') or '').strip()
+    password = data.get('password') or data.get('Password') or ''
+    confirm_password = data.get('confirmPassword') or data.get('ConfirmPassword') or password
+
+    if not token:
+        return jsonify({'error': 'Thiếu mã đặt lại mật khẩu'}), 400
+    if not password:
+        return jsonify({'error': 'Vui lòng nhập mật khẩu mới'}), 400
+    if password != confirm_password:
+        return jsonify({'error': 'Mật khẩu xác nhận không khớp'}), 400
+    if len(str(password)) < 6:
+        return jsonify({'error': 'Mật khẩu mới phải có ít nhất 6 ký tự'}), 400
+
+    conn = get_auth_connection()
+    if not conn:
+        return jsonify({'error': 'Không thể kết nối database đăng nhập'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        _ensure_password_reset_table(cursor)
+        token_hash = _hash_reset_token(token)
+        cursor.execute(
+            """
+            SELECT pr.TokenID, pr.UserID, pr.ExpiresAt, pr.UsedAt, u.Status
+            FROM password_reset_tokens pr
+            JOIN users u ON pr.UserID = u.UserID
+            WHERE pr.TokenHash = %s
+            LIMIT 1
+            """,
+            (token_hash,)
+        )
+        row = cursor.fetchone()
+
+        if not row or row.get('UsedAt') is not None:
+            return jsonify({'error': 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã được sử dụng'}), 400
+        if row.get('Status') != 'Active':
+            return jsonify({'error': 'Tài khoản đã bị khóa hoặc ngừng hoạt động'}), 403
+
+        expires_at = row.get('ExpiresAt')
+        if expires_at and datetime.now() > expires_at:
+            cursor.execute('UPDATE password_reset_tokens SET UsedAt = NOW() WHERE TokenID = %s', (row['TokenID'],))
+            conn.commit()
+            return jsonify({'error': 'Liên kết đặt lại mật khẩu đã hết hạn'}), 400
+
+        cursor.execute(
+            'UPDATE users SET PasswordHash = %s WHERE UserID = %s',
+            (_hash_password(password), row['UserID'])
+        )
+        cursor.execute('UPDATE password_reset_tokens SET UsedAt = NOW() WHERE TokenID = %s', (row['TokenID'],))
+        conn.commit()
+        return jsonify({'message': 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'}), 200
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 500

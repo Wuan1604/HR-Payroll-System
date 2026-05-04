@@ -324,3 +324,57 @@
   cursor: pointer;
 }
 .sidebar__logout:hover { background: #dc2626; }
+
+/* Line Art icon helpers */
+.sidebar__brand,
+.nav-link,
+.sidebar__logout,
+.btn,
+.btn-secondary,
+button {
+  gap: 8px;
+}
+
+.sidebar__brand,
+.nav-link,
+.sidebar__logout,
+.btn,
+.btn-secondary,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+}
+
+.nav-link__icon {
+  flex: 0 0 auto;
+  opacity: 0.92;
+}
+
+.nav-link span,
+.sidebar__logout span {
+  line-height: 1.2;
+}
+
+button svg,
+.btn svg,
+a.btn svg,
+.btn-secondary svg {
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.sidebar__logout {
+  align-items: center;
+  justify-content: center;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

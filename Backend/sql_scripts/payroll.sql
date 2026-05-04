@@ -179,3 +179,20 @@ CREATE TABLE IF NOT EXISTS `attendance_details` (
   PRIMARY KEY (`DetailID`) USING BTREE,
   UNIQUE KEY `unique_employee_date` (`EmployeeID`, `WorkDate`)
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for employee_base_salaries
+-- Lưu lương cơ bản hiện tại của từng nhân viên để tự điền khi tạo bảng lương.
+-- Có thể chạy riêng đoạn này trên database payroll hiện tại.
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `employee_base_salaries` (
+  `BaseSalaryID` int NOT NULL AUTO_INCREMENT,
+  `EmployeeID` int NOT NULL,
+  `BaseSalary` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `EffectiveDate` date NULL DEFAULT NULL,
+  `Note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `CreatedAt` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `UpdatedAt` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`BaseSalaryID`) USING BTREE,
+  UNIQUE KEY `unique_employee_base_salary` (`EmployeeID`)
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;

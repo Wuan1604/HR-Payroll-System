@@ -25,3 +25,5 @@ class Config:
     SENDER_EMAIL = os.getenv('SENDER_EMAIL', '')
     SENDER_PASSWORD = os.getenv('SENDER_PASSWORD', '')
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev_default_key')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+    PASSWORD_RESET_EXPIRES_MINUTES = int(os.getenv('PASSWORD_RESET_EXPIRES_MINUTES', '30'))

@@ -123,3 +123,27 @@ export async function downloadSalaryReport(params = {}) {
 
     return res.blob()
 }
+
+export function getBaseSalaries() {
+    return apiFetch('/api/payroll/base-salaries')
+}
+
+export function saveBaseSalary(payload) {
+    return apiFetch('/api/payroll/base-salaries', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    })
+}
+
+export function updateBaseSalary(employeeId, payload) {
+    return apiFetch(`/api/payroll/base-salaries/${employeeId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    })
+}
+
+export function deleteBaseSalary(employeeId) {
+    return apiFetch(`/api/payroll/base-salaries/${employeeId}`, {
+        method: 'DELETE',
+    })
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Send } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getEmployees } from '../api/humanApi'
@@ -154,7 +155,7 @@ export default function SendSalaryEmailsPage() {
         </div>
 
         <button className="mail-refresh-btn" onClick={loadEmployees} disabled={loadingEmployees || sending}>
-          Làm mới
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới
         </button>
       </div>
 
@@ -313,7 +314,7 @@ export default function SendSalaryEmailsPage() {
             </div>
 
             <button className="mail-send-btn" onClick={onSend} disabled={sending || selectedCount === 0}>
-              {sending ? 'Đang gửi...' : 'Gửi email'}
+              <Send size={17} strokeWidth={1.8} aria-hidden="true" /> {sending ? 'Đang gửi...' : 'Gửi email'}
             </button>
           </div>
 

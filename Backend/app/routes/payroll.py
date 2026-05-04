@@ -110,6 +110,41 @@ def ensure_attendance_details_table(cursor):
     """)
 
 
+
+
+def ensure_employee_base_salaries_table(cursor):
+    """Tạo bảng lưu lương cơ bản hiện tại của từng nhân viên nếu chưa có."""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS employee_base_salaries (
+            BaseSalaryID INT NOT NULL AUTO_INCREMENT,
+            EmployeeID INT NOT NULL,
+            BaseSalary DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+            EffectiveDate DATE NULL,
+            Note TEXT NULL,
+            CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (BaseSalaryID),
+            UNIQUE KEY unique_employee_base_salary (EmployeeID)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
+
+
+def row_to_base_salary_json(row):
+    return {
+        'BaseSalaryID': int(row.get('BaseSalaryID') or 0),
+        'EmployeeID': int(row.get('EmployeeID') or 0),
+        'FullName': row.get('FullName') or '',
+        'DepartmentName': row.get('DepartmentName') or 'N/A',
+        'PositionName': row.get('PositionName') or 'N/A',
+        'Status': row.get('Status') or '',
+        'BaseSalary': float(row.get('BaseSalary') or 0),
+        'EffectiveDate': to_json_date(row.get('EffectiveDate')),
+        'Note': row.get('Note') or '',
+        'CreatedAt': str(row.get('CreatedAt')) if row.get('CreatedAt') else None,
+        'UpdatedAt': str(row.get('UpdatedAt')) if row.get('UpdatedAt') else None,
+        'HasBaseSalary': bool(row.get('BaseSalaryID')),
+    }
+
 def parse_date_value(value):
     if isinstance(value, date):
         return value
@@ -334,6 +369,177 @@ def format_seniority_by_work_units(total_valid_days):
         'text': ' '.join(parts)
     }
 
+
+
+# =========================================================
+# 0. QUẢN LÝ LƯƠNG CƠ BẢN NHÂN VIÊN
+# =========================================================
+@payroll_bp.route('/base-salaries', methods=['GET'])
+@roles_required('Admin', 'Manager')
+def get_base_salaries():
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_employee_base_salaries_table(cursor)
+        cursor.execute("""
+            SELECT
+                e.EmployeeID,
+                e.FullName,
+                e.DepartmentID,
+                e.PositionID,
+                e.Status,
+                COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                COALESCE(p.PositionName, 'N/A') AS PositionName,
+                b.BaseSalaryID,
+                b.BaseSalary,
+                b.EffectiveDate,
+                b.Note,
+                b.CreatedAt,
+                b.UpdatedAt
+            FROM employees_payroll e
+            LEFT JOIN employee_base_salaries b ON e.EmployeeID = b.EmployeeID
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            ORDER BY e.EmployeeID DESC
+        """)
+        rows = cursor.fetchall()
+        return jsonify([row_to_base_salary_json(row) for row in rows]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/base-salaries', methods=['POST'])
+@roles_required('Admin', 'Manager')
+def create_base_salary():
+    data = request.json or {}
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+
+    try:
+        employee_id = data.get('EmployeeID')
+        base_salary = data.get('BaseSalary')
+        effective_date = data.get('EffectiveDate') or None
+        note = data.get('Note') or ''
+
+        if not employee_id:
+            return jsonify({"error": "Vui lòng chọn nhân viên"}), 400
+        if base_salary is None or str(base_salary).strip() == '':
+            return jsonify({"error": "Vui lòng nhập lương cơ bản"}), 400
+
+        base_salary = float(base_salary)
+        if base_salary < 0:
+            return jsonify({"error": "Lương cơ bản không được âm"}), 400
+
+        cursor = conn.cursor(dictionary=True)
+        ensure_employee_base_salaries_table(cursor)
+        cursor.execute("SELECT EmployeeID FROM employees_payroll WHERE EmployeeID = %s", (employee_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Không tìm thấy nhân viên"}), 404
+
+        cursor.execute("""
+            INSERT INTO employee_base_salaries (EmployeeID, BaseSalary, EffectiveDate, Note)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                BaseSalary = VALUES(BaseSalary),
+                EffectiveDate = VALUES(EffectiveDate),
+                Note = VALUES(Note),
+                UpdatedAt = CURRENT_TIMESTAMP
+        """, (employee_id, base_salary, effective_date, note))
+        conn.commit()
+
+        cursor.execute("""
+            SELECT e.EmployeeID, e.FullName, e.Status,
+                   COALESCE(d.DepartmentName, 'N/A') AS DepartmentName,
+                   COALESCE(p.PositionName, 'N/A') AS PositionName,
+                   b.BaseSalaryID, b.BaseSalary, b.EffectiveDate, b.Note, b.CreatedAt, b.UpdatedAt
+            FROM employees_payroll e
+            LEFT JOIN employee_base_salaries b ON e.EmployeeID = b.EmployeeID
+            LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
+            LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
+            WHERE e.EmployeeID = %s
+        """, (employee_id,))
+        return jsonify(row_to_base_salary_json(cursor.fetchone())), 200
+    except ValueError:
+        return jsonify({"error": "Lương cơ bản phải là số hợp lệ"}), 400
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/base-salaries/<int:employee_id>', methods=['PUT'])
+@roles_required('Admin', 'Manager')
+def update_base_salary(employee_id):
+    data = request.json or {}
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+
+    try:
+        base_salary = data.get('BaseSalary')
+        effective_date = data.get('EffectiveDate') or None
+        note = data.get('Note') or ''
+
+        if base_salary is None or str(base_salary).strip() == '':
+            return jsonify({"error": "Vui lòng nhập lương cơ bản"}), 400
+
+        base_salary = float(base_salary)
+        if base_salary < 0:
+            return jsonify({"error": "Lương cơ bản không được âm"}), 400
+
+        cursor = conn.cursor(dictionary=True)
+        ensure_employee_base_salaries_table(cursor)
+        cursor.execute("SELECT EmployeeID FROM employees_payroll WHERE EmployeeID = %s", (employee_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Không tìm thấy nhân viên"}), 404
+
+        cursor.execute("""
+            INSERT INTO employee_base_salaries (EmployeeID, BaseSalary, EffectiveDate, Note)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                BaseSalary = VALUES(BaseSalary),
+                EffectiveDate = VALUES(EffectiveDate),
+                Note = VALUES(Note),
+                UpdatedAt = CURRENT_TIMESTAMP
+        """, (employee_id, base_salary, effective_date, note))
+        conn.commit()
+        return jsonify({"message": "Cập nhật lương cơ bản thành công", "EmployeeID": employee_id}), 200
+    except ValueError:
+        return jsonify({"error": "Lương cơ bản phải là số hợp lệ"}), 400
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@payroll_bp.route('/base-salaries/<int:employee_id>', methods=['DELETE'])
+@roles_required('Admin', 'Manager')
+def delete_base_salary(employee_id):
+    conn = get_mysql_connection()
+    if not conn:
+        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_employee_base_salaries_table(cursor)
+        cursor.execute("DELETE FROM employee_base_salaries WHERE EmployeeID = %s", (employee_id,))
+        conn.commit()
+        return jsonify({"message": "Đã xóa lương cơ bản của nhân viên", "EmployeeID": employee_id}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
 # =========================================================
 # 1. HIỂN THỊ BẢNG LƯƠNG
 # =========================================================
@@ -346,6 +552,7 @@ def show_salaries():
 
     try:
         cursor = mysql_conn.cursor(dictionary=True)
+        ensure_employee_base_salaries_table(cursor)
         user = getattr(request, 'current_user', {})
         employee_filter = ''
         params = ()
@@ -365,12 +572,15 @@ def show_salaries():
                 COALESCE(s.SalaryID, 0) AS SalaryID,
                 COALESCE(s.SalaryMonth, DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS SalaryMonth,
                 COALESCE(s.BaseSalary, 0) AS BaseSalary,
+                COALESCE(b.BaseSalary, 0) AS DefaultBaseSalary,
+                b.EffectiveDate AS DefaultBaseSalaryEffectiveDate,
                 COALESCE(s.Bonus, 0) AS Bonus,
                 COALESCE(s.Deductions, 0) AS Deductions,
                 COALESCE(s.NetSalary, 0) AS NetSalary,
                 s.CreatedAt
             FROM employees_payroll e
             LEFT JOIN salaries s ON e.EmployeeID = s.EmployeeID
+            LEFT JOIN employee_base_salaries b ON e.EmployeeID = b.EmployeeID
             LEFT JOIN departments_payroll d ON e.DepartmentID = d.DepartmentID
             LEFT JOIN positions_payroll p ON e.PositionID = p.PositionID
             {employee_filter}
@@ -381,6 +591,8 @@ def show_salaries():
             s['SalaryID'] = int(s['SalaryID'] or 0)
             s['EmployeeID'] = int(s['EmployeeID'])
             s['BaseSalary'] = float(s['BaseSalary'] or 0)
+            s['DefaultBaseSalary'] = float(s.get('DefaultBaseSalary') or 0)
+            s['DefaultBaseSalaryEffectiveDate'] = str(s.get('DefaultBaseSalaryEffectiveDate')) if s.get('DefaultBaseSalaryEffectiveDate') else None
             s['Bonus'] = float(s['Bonus'] or 0)
             s['Deductions'] = float(s['Deductions'] or 0)
             s['NetSalary'] = float(s['NetSalary'] or 0)

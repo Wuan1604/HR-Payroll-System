@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LogIn, UserRoundPlus, KeyRound } from '../components/LineIcons'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { login } from '../api/authApi'
 import { getCurrentUser, saveAuth } from '../utils/auth'
@@ -59,11 +60,12 @@ export default function LoginPage() {
         </label>
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          <LogIn size={18} strokeWidth={1.8} aria-hidden="true" /> {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
 
-        <div className="auth-hint">
-          Chưa có tài khoản? <Link to="/register">Đăng ký tài khoản</Link>
+        <div className="auth-hint auth-hint--split">
+          <span>Chưa có tài khoản? <Link to="/register"><UserRoundPlus size={15} strokeWidth={1.8} aria-hidden="true" /> Đăng ký tài khoản</Link></span>
+          <Link to="/forgot-password"><KeyRound size={15} strokeWidth={1.8} aria-hidden="true" /> Quên mật khẩu?</Link>
         </div>
       </form>
     </div>

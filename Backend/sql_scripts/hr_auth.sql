@@ -48,3 +48,17 @@ VALUES
 ('Manager', 'Quản lý nhân sự, bảng lương và chấm công'),
 ('Employee', 'Nhân viên chỉ xem thông tin cá nhân, lương và chấm công của bản thân')
 ON DUPLICATE KEY UPDATE Description = VALUES(Description);
+
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    TokenID INT AUTO_INCREMENT PRIMARY KEY,
+    UserID INT NOT NULL,
+    TokenHash VARCHAR(64) NOT NULL UNIQUE,
+    ExpiresAt DATETIME NOT NULL,
+    UsedAt DATETIME NULL,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_password_reset_user
+        FOREIGN KEY (UserID) REFERENCES users(UserID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);

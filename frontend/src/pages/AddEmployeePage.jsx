@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { UserPlus, ArrowLeft } from '../components/LineIcons'
 import { useNavigate } from 'react-router-dom'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
@@ -162,7 +163,7 @@ export default function AddEmployeePage() {
 
       <div className="add-form-actions">
         <button className="btn-submit-employee" type="submit" disabled={loading}>
-          {loading ? 'Đang lưu...' : 'Lưu nhân viên'}
+          <UserPlus size={18} strokeWidth={1.8} aria-hidden="true" /> {loading ? 'Đang lưu...' : 'Lưu nhân viên'}
         </button>
 
         <button
@@ -170,7 +171,7 @@ export default function AddEmployeePage() {
           type="button"
           onClick={() => navigate('/employees-page')}
         >
-          Quay lại
+          <ArrowLeft size={18} strokeWidth={1.8} aria-hidden="true" /> Quay lại
         </button>
       </div>
     </form>

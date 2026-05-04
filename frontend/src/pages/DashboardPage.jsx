@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw } from '../components/LineIcons'
 import Loading from '../components/Loading'
 import ApiError from '../components/ApiError'
 import { getEmployees, getReportHuman } from '../api/humanApi'
@@ -9,7 +10,7 @@ const formatMoney = (value) => {
   const number = Number(value || 0)
   if (number >= 1_000_000_000) return `${(number / 1_000_000_000).toFixed(1)} tỷ`
   if (number >= 1_000_000) return `${(number / 1_000_000).toFixed(1)} triệu`
-  return number.toLocaleString('vi-VN')
+  return number.toLocaleString('en-US')
 }
 
 const normalizeMonth = (value) => {
@@ -393,7 +394,7 @@ export default function DashboardPage() {
           <p>Theo dõi nhanh tình hình nhân sự, lương, chấm công và các cảnh báo quan trọng.</p>
         </div>
         <button className="dashboard-refresh" onClick={load} disabled={loading}>
-          ↻ Làm mới dữ liệu
+          <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" /> Làm mới dữ liệu
         </button>
       </div>
 
