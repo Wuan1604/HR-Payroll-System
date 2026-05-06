@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app.database import get_sqlserver_connection, get_mysql_connection, get_auth_connection
 from app.auth import roles_required
 import pyodbc
+from datetime import datetime, date
 
 human_bp = Blueprint('human', __name__)
 
@@ -39,6 +40,23 @@ def safe_int_or_none(value):
     if value is None or value == '':
         return None
     return int(value)
+
+
+def parse_iso_date(value):
+    if value is None or str(value).strip() == '':
+        return None
+    if isinstance(value, date):
+        return value
+    return datetime.strptime(str(value)[:10], '%Y-%m-%d').date()
+
+
+def validate_employee_age_and_hire(date_of_birth, hire_date):
+    if hire_date < date_of_birth:
+        return "Ngày vào làm phải lớn hơn hoặc bằng ngày sinh"
+    age = hire_date.year - date_of_birth.year - ((hire_date.month, hire_date.day) < (date_of_birth.month, date_of_birth.day))
+    if age < 18:
+        return "Nhân viên phải đủ 18 tuổi tại ngày vào làm"
+    return None
 
 # ---------------------------------------------------------
 # 0. EMPLOYEE - XEM / SỬA THÔNG TIN CÁ NHÂN
@@ -143,6 +161,23 @@ def update_my_profile():
 
         if not sql_cursor.fetchone():
             return jsonify({"error": "Không tìm thấy hồ sơ nhân viên của tài khoản này"}), 404
+
+        if date_of_birth is not None:
+            sql_cursor.execute("""
+                SELECT HireDate
+                FROM [HUMAN_2025].[dbo].[Employees]
+                WHERE EmployeeID = ?
+            """, (employee_id,))
+            row = sql_cursor.fetchone()
+            hire_date_value = row[0] if row else None
+            try:
+                parsed_dob = parse_iso_date(date_of_birth)
+            except ValueError:
+                return jsonify({"error": "Định dạng ngày không hợp lệ"}), 400
+            if hire_date_value is not None:
+                validation_error = validate_employee_age_and_hire(parsed_dob, hire_date_value)
+                if validation_error:
+                    return jsonify({"error": validation_error}), 400
 
         sql_cursor.execute("""
             UPDATE [HUMAN_2025].[dbo].[Employees]
@@ -319,6 +354,16 @@ def add_employee():
     if missing_fields:
         return jsonify({"error": "Thiếu thông tin bắt buộc: " + ", ".join(missing_fields)}), 400
 
+    try:
+        date_of_birth = parse_iso_date(data.get("DateOfBirth"))
+        hire_date = parse_iso_date(data.get("HireDate"))
+    except ValueError:
+        return jsonify({"error": "Định dạng ngày không hợp lệ"}), 400
+
+    validation_error = validate_employee_age_and_hire(date_of_birth, hire_date)
+    if validation_error:
+        return jsonify({"error": validation_error}), 400
+
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
 
@@ -345,11 +390,11 @@ def add_employee():
         """, (
             new_employee_id,
             data.get("FullName"),
-            data.get("DateOfBirth"),
+            date_of_birth,
             data.get("Gender"),
             data.get("PhoneNumber"),
             data.get("Email"),
-            data.get("HireDate"),
+            hire_date,
             safe_int_or_none(data.get("DepartmentID")),
             safe_int_or_none(data.get("PositionID")),
             user_status,
@@ -461,6 +506,26 @@ def update_employee():
 
         if not sql_cursor.fetchone():
             return jsonify({"error": "Nhân viên không tồn tại"}), 404
+
+        sql_cursor.execute("""
+            SELECT DateOfBirth, HireDate
+            FROM [HUMAN_2025].[dbo].[Employees]
+            WHERE EmployeeID = ?
+        """, (employee_id,))
+        current_dates = sql_cursor.fetchone()
+        current_dob = current_dates[0] if current_dates else None
+        current_hire_date = current_dates[1] if current_dates else None
+
+        try:
+            parsed_dob = parse_iso_date(date_of_birth) if date_of_birth is not None else current_dob
+            parsed_hire_date = parse_iso_date(hire_date) if hire_date is not None else current_hire_date
+        except ValueError:
+            return jsonify({"error": "Định dạng ngày không hợp lệ"}), 400
+
+        if parsed_dob is not None and parsed_hire_date is not None:
+            validation_error = validate_employee_age_and_hire(parsed_dob, parsed_hire_date)
+            if validation_error:
+                return jsonify({"error": validation_error}), 400
 
         # Cập nhật động để tránh lỗi kiểu dữ liệu với COALESCE trên SQL Server
         sql_fields = []

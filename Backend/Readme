@@ -14,9 +14,6 @@ Hr-Payroll-BE/
 └── run.py                   # File duy nhất để chạy ứng dụng (thay cho app.py)
 
 
-Tài khoản test
-username: admin123
-password: 1
 
 ## Chức năng quên mật khẩu
 

@@ -99,6 +99,7 @@ export async function downloadSalaryReport(params = {}) {
     const { getToken } = await import('../utils/auth')
     const query = new URLSearchParams()
     if (params.month) query.set('month', params.month)
+    if (params.department_id) query.set('department_id', params.department_id)
     if (params.employee_id) query.set('employee_id', params.employee_id)
     query.set('format', params.format || 'pdf')
 

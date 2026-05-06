@@ -31,6 +31,7 @@ export default function PayrollSalariesPage() {
   const [error, setError] = useState(null)
   const [rows, setRows] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('')
   const [selectedReportEmployeeId, setSelectedReportEmployeeId] = useState('')
   const [exporting, setExporting] = useState(false)
 
@@ -67,6 +68,16 @@ export default function PayrollSalariesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const departmentOptions = useMemo(() => {
+    const map = new Map()
+    rows.forEach((item) => {
+      const id = item.DepartmentID != null ? String(item.DepartmentID) : ''
+      const name = item.DepartmentName || 'Chưa có'
+      if (!map.has(id)) map.set(id, name)
+    })
+    return Array.from(map.entries()).map(([DepartmentID, DepartmentName]) => ({ DepartmentID, DepartmentName }))
+  }, [rows])
+
   const employeeOptions = useMemo(() => {
     const map = new Map()
     rows.forEach((item) => {
@@ -75,20 +86,27 @@ export default function PayrollSalariesPage() {
     return Array.from(map.entries()).map(([EmployeeID, FullName]) => ({ EmployeeID, FullName }))
   }, [rows])
 
+  const selectedDepartmentName = useMemo(() => {
+    const option = departmentOptions.find((item) => item.DepartmentID === selectedDepartmentId)
+    return option ? option.DepartmentName : 'Tất cả phòng ban'
+  }, [departmentOptions, selectedDepartmentId])
+
   async function handleExportSalaryReport(format = 'pdf') {
     setExporting(true)
     setError(null)
     try {
       const blob = await downloadSalaryReport({
         month: selectedMonth,
+        department_id: selectedDepartmentId,
         employee_id: selectedReportEmployeeId,
         format,
       })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       const employeePart = selectedReportEmployeeId ? '-nv-' + selectedReportEmployeeId : ''
+      const departmentPart = selectedDepartmentId ? '-pb-' + selectedDepartmentId : ''
       a.href = url
-      a.download = 'bao-cao-luong-' + (selectedMonth || 'tat-ca') + employeePart + '.' + format
+      a.download = 'bao-cao-luong-' + (selectedMonth || 'tat-ca') + departmentPart + employeePart + '.' + format
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -112,12 +130,16 @@ export default function PayrollSalariesPage() {
   }, [rows])
 
   const filteredRows = useMemo(() => {
-    if (!selectedMonth) return rows
-
-    return rows.filter(
-      (item) => getMonthFromDate(item.SalaryMonth) === selectedMonth
-    )
-  }, [rows, selectedMonth])
+    return rows.filter((item) => {
+      if (selectedMonth && getMonthFromDate(item.SalaryMonth) !== selectedMonth) {
+        return false
+      }
+      if (selectedDepartmentId && String(item.DepartmentID || '') !== selectedDepartmentId) {
+        return false
+      }
+      return true
+    })
+  }, [rows, selectedMonth, selectedDepartmentId])
 
   const summary = useMemo(() => {
     return filteredRows.reduce(
@@ -185,6 +207,21 @@ export default function PayrollSalariesPage() {
             </label>
 
             <label className="payroll-field">
+              <span>Lọc theo phòng ban</span>
+              <select
+                value={selectedDepartmentId}
+                onChange={(e) => setSelectedDepartmentId(e.target.value)}
+              >
+                <option value="">Tất cả phòng ban</option>
+                {departmentOptions.map((dept) => (
+                  <option key={dept.DepartmentID} value={dept.DepartmentID}>
+                    {dept.DepartmentName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="payroll-field">
               <span>Nhân viên khi xuất báo cáo</span>
               <select
                 value={selectedReportEmployeeId}
@@ -211,7 +248,11 @@ export default function PayrollSalariesPage() {
             <button
               className="payroll-clear-btn"
               type="button"
-              onClick={() => setSelectedMonth('')}
+              onClick={() => {
+                setSelectedMonth('')
+                setSelectedDepartmentId('')
+                setSelectedReportEmployeeId('')
+              }}
             >
               <X size={15} strokeWidth={1.8} aria-hidden="true" /> Xem tất cả
             </button>
@@ -252,7 +293,10 @@ export default function PayrollSalariesPage() {
                   ? `Bảng lương tháng ${selectedMonth}`
                   : 'Tất cả bảng lương'}
               </h3>
-              <span>{filteredRows.length} bản ghi</span>
+              <span>
+                {selectedDepartmentId ? `Phòng ban: ${selectedDepartmentName} • ` : ''}
+                {filteredRows.length} bản ghi
+              </span>
             </div>
 
             <div className="payroll-table-wrapper">

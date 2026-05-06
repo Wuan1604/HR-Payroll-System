@@ -30,6 +30,7 @@
   margin: 0;
   font-size: 30px;
   line-height: 1.2;
+  color: #000;
 }
 
 .dashboard-hero p:last-child {

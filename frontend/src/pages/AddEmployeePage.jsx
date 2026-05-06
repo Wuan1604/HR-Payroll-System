@@ -78,11 +78,52 @@ export default function AddEmployeePage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  function calculateAgeAtDate(birthDate, targetDate) {
+    const birth = new Date(birthDate)
+    const target = new Date(targetDate)
+    let age = target.getFullYear() - birth.getFullYear()
+    if (
+      target.getMonth() < birth.getMonth() ||
+      (target.getMonth() === birth.getMonth() && target.getDate() < birth.getDate())
+    ) {
+      age -= 1
+    }
+    return age
+  }
+
   async function onSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError(null)
     setMessage(null)
+
+    if (!form.DateOfBirth || !form.HireDate) {
+      setError({ message: 'Vui lòng nhập cả ngày sinh và ngày vào làm.' })
+      setLoading(false)
+      return
+    }
+
+    const birthDate = new Date(form.DateOfBirth)
+    const hireDate = new Date(form.HireDate)
+    if (Number.isNaN(birthDate.getTime()) || Number.isNaN(hireDate.getTime())) {
+      setError({ message: 'Định dạng ngày không hợp lệ.' })
+      setLoading(false)
+      return
+    }
+
+    if (hireDate < birthDate) {
+      setError({ message: 'Ngày vào làm phải lớn hơn hoặc bằng ngày sinh.' })
+      setLoading(false)
+      return
+    }
+
+    const age = calculateAgeAtDate(form.DateOfBirth, form.HireDate)
+    if (age < 18) {
+      setError({ message: 'Ngày sinh chưa hợp lệ.' })
+      setLoading(false)
+      return
+    }
+
     try {
       await addEmployee(form)
       setMessage('Thêm mới và đồng bộ thành công.')
@@ -154,7 +195,7 @@ export default function AddEmployeePage() {
                 type={f.type || 'text'}
                 value={form[f.key]}
                 onChange={(e) => update(f.key, e.target.value)}
-                required={f.key === 'FullName'}
+                required={['FullName', 'DateOfBirth', 'HireDate'].includes(f.key)}
               />
             )}
           </label>

@@ -688,12 +688,15 @@ def attendance_employees():
 def save_attendance_check():
     data = request.json or {}
     conn = get_mysql_connection()
-    if not conn:
-        return jsonify({"error": "Lỗi kết nối MySQL"}), 500
+    sql_conn = get_sqlserver_connection()
+
+    if not conn or not sql_conn:
+        return jsonify({"error": "Lỗi kết nối Database"}), 500
 
     try:
         cursor = conn.cursor(dictionary=True)
         ensure_attendance_details_table(cursor)
+        sql_cursor = sql_conn.cursor()
 
         employee_id = data.get('EmployeeID')
         work_date_raw = data.get('WorkDate')
@@ -708,6 +711,19 @@ def save_attendance_check():
         work_date = parse_date_value(work_date_raw)
         check_in = parse_time_value(data.get('CheckIn'))
         check_out = parse_time_value(data.get('CheckOut'))
+
+        sql_cursor.execute("""
+            SELECT HireDate
+            FROM [HUMAN_2025].[dbo].[Employees]
+            WHERE EmployeeID = ?
+        """, (employee_id,))
+        hire_row = sql_cursor.fetchone()
+        if not hire_row:
+            return jsonify({"error": "Nhân viên không tồn tại"}), 404
+
+        hire_date = hire_row[0]
+        if hire_date is not None and work_date < hire_date:
+            return jsonify({"error": "Ngày chấm công không được trước ngày vào làm của nhân viên"}), 400
 
         if status == 'Đi làm' and (not check_in or not check_out):
             return jsonify({"error": "Đi làm thì phải nhập đủ giờ vào và giờ ra"}), 400
@@ -753,6 +769,8 @@ def save_attendance_check():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+        if sql_conn:
+            sql_conn.close()
 
 
 @payroll_bp.route('/attendance/details', methods=['GET'])
@@ -1003,12 +1021,15 @@ def build_salary_raise_suggestion(total_valid_days, base_salary=0):
     }
 
 
-def salary_report_rows(cursor, month_value=None, employee_id=None):
+def salary_report_rows(cursor, month_value=None, department_id=None, employee_id=None):
     where = []
     params = []
     if month_value:
         where.append("DATE_FORMAT(s.SalaryMonth, '%Y-%m') = %s")
         params.append(str(month_value)[:7])
+    if department_id:
+        where.append('e.DepartmentID = %s')
+        params.append(department_id)
     if employee_id:
         where.append('s.EmployeeID = %s')
         params.append(employee_id)
@@ -1160,6 +1181,7 @@ def build_salary_report_pdf(rows, summary):
 def report_salaries():
     user = getattr(request, 'current_user', {})
     month_value = request.args.get('month') or request.args.get('salary_month')
+    department_id = request.args.get('department_id')
     employee_id = request.args.get('employee_id')
     export_format = (request.args.get('format') or 'json').lower()
 
@@ -1171,13 +1193,19 @@ def report_salaries():
         except Exception:
             return jsonify({'error': 'employee_id không hợp lệ'}), 400
 
+    if department_id:
+        try:
+            department_id = int(department_id)
+        except Exception:
+            return jsonify({'error': 'department_id không hợp lệ'}), 400
+
     conn = get_mysql_connection()
     if not conn:
         return jsonify({'error': 'Lỗi kết nối MySQL'}), 500
 
     try:
         cursor = conn.cursor(dictionary=True)
-        rows = salary_report_rows(cursor, month_value, employee_id)
+        rows = salary_report_rows(cursor, month_value, department_id, employee_id)
         summary = {
             'EmployeeCount': len({r['EmployeeID'] for r in rows}),
             'RecordCount': len(rows),
