@@ -30,9 +30,6 @@ def get_current_user():
         token = auth_header.replace('Bearer ', '', 1).strip()
 
     if not token:
-        token = request.cookies.get('token')
-
-    if not token:
         return None
 
     try:

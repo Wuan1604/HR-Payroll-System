@@ -779,25 +779,65 @@ def show_departments():
 @human_bp.route('/add-department', methods=['POST'])
 @roles_required('Admin')
 def add_department():
-    name = request.json.get('DepartmentName')
+    data = request.json or {}
+    name = (data.get('DepartmentName') or data.get('name') or '').strip()
+
+    if not name:
+        return jsonify({"error": "Tên phòng ban không được để trống"}), 400
+
     sql_conn = get_sqlserver_connection()
     my_conn = get_mysql_connection()
+
+    if not sql_conn or not my_conn:
+        if sql_conn:
+            sql_conn.close()
+        if my_conn:
+            my_conn.close()
+        return jsonify({"error": "Kết nối Database thất bại"}), 500
+
     sql_cursor = sql_conn.cursor()
     my_cursor = my_conn.cursor()
-    try:
-        # 1. Thêm vào SQL Server
-        sql_cursor.execute("INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName) VALUES (?)", (name,))
-        sql_cursor.execute("SELECT CAST(SCOPE_IDENTITY() AS INT)")
-        new_id = int(sql_cursor.fetchone()[0])
-        sql_conn.commit()
 
-        # 2. Đồng bộ sang MySQL (Bảng departments_payroll)
-        my_cursor.execute("INSERT INTO departments_payroll (DepartmentID, DepartmentName) VALUES (%s, %s)", (new_id, name))
+    try:
+        sql_cursor.execute("""
+            SELECT DepartmentID
+            FROM [HUMAN_2025].[dbo].[Departments]
+            WHERE LOWER(LTRIM(RTRIM(DepartmentName))) = LOWER(?)
+        """, (name,))
+        if sql_cursor.fetchone():
+            return jsonify({"error": "Phòng ban đã tồn tại"}), 400
+
+        sql_cursor.execute("""
+            INSERT INTO [HUMAN_2025].[dbo].[Departments] (DepartmentName)
+            OUTPUT INSERTED.DepartmentID
+            VALUES (?)
+        """, (name,))
+        new_id = int(sql_cursor.fetchone()[0])
+
+        my_cursor.execute("""
+            INSERT INTO departments_payroll (DepartmentID, DepartmentName)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE DepartmentName = VALUES(DepartmentName)
+        """, (new_id, name))
+
+        sql_conn.commit()
         my_conn.commit()
-        return jsonify({"message": "Thêm thành công", "id": new_id}), 201
+
+        return jsonify({
+            "message": "Thêm phòng ban thành công",
+            "id": new_id,
+            "DepartmentID": new_id,
+            "DepartmentName": name
+        }), 201
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        sql_conn.rollback()
+        my_conn.rollback()
+        return jsonify({"error": f"Lỗi hệ thống: {str(e)}"}), 500
+
     finally:
+        sql_cursor.close()
+        my_cursor.close()
         sql_conn.close()
         my_conn.close()
 

@@ -26,10 +26,17 @@ export default function DepartmentPage() {
 
   async function handleAdd() {
     const value = newDeptName.trim()
-    if (!value) return
-    await addDepartment(value)
-    setNewDeptName('')
-    loadData()
+    if (loading || !value) return
+
+    setLoading(true)
+    try {
+      await addDepartment(value)
+      setNewDeptName('')
+      await loadData()
+    } catch (e) {
+      alert(e.message || 'Không thể thêm phòng ban')
+      setLoading(false)
+    }
   }
 
   async function handleDelete(id) {
@@ -71,7 +78,7 @@ export default function DepartmentPage() {
               if (e.key === 'Enter') handleAdd()
             }}
           />
-          <button className="department-btn primary" onClick={handleAdd}>
+          <button className="department-btn primary" onClick={handleAdd} disabled={loading || !newDeptName.trim()}>
             <Plus size={16} strokeWidth={1.8} aria-hidden="true" /> Thêm mới
           </button>
         </div>

@@ -3,6 +3,7 @@ import { RefreshCw, Save, UserCircle2 } from '../components/LineIcons'
 import ApiError from '../components/ApiError'
 import Loading from '../components/Loading'
 import { getMyProfile, updateMyProfile } from '../api/humanApi'
+import { getCurrentUser, updateCurrentUser } from '../utils/auth'
 import '../styles/EmployeeProfilePage.css'
 
 export default function EmployeeProfilePage() {
@@ -70,13 +71,14 @@ export default function EmployeeProfilePage() {
         Email: data?.Email || '',
       })
       try {
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
-        localStorage.setItem('user', JSON.stringify({
-          ...currentUser,
+        const currentUser = getCurrentUser() || {}
+        updateCurrentUser({
           FullName: data?.FullName || currentUser.FullName,
           Email: data?.Email || currentUser.Email,
-        }))
-      } catch {}
+        })
+      } catch {
+        // Ignore cache refresh errors; profile update already succeeded.
+      }
       setMessage(res?.message || 'Cập nhật thông tin cá nhân thành công.')
     } catch (e) {
       setError(e)

@@ -146,7 +146,7 @@ def login():
             'Role': user['RoleName'],
         }
         resp = make_response(jsonify({'message': 'Đăng nhập thành công', 'token': token, 'user': safe_user}), 200)
-        resp.set_cookie('token', token, httponly=True, samesite='Lax')
+        resp.delete_cookie('token')
         return resp
     except Exception as e:
         conn.rollback()

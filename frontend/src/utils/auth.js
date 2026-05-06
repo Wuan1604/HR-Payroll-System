@@ -1,23 +1,32 @@
 export function saveAuth(token, user) {
-  localStorage.setItem('token', token)
-  localStorage.setItem('user', JSON.stringify(user || {}))
+  clearLegacyAuth()
+  sessionStorage.setItem('token', token)
+  sessionStorage.setItem('user', JSON.stringify(user || {}))
 }
 
 export function clearAuth() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
+  clearLegacyAuth()
 }
 
 export function getToken() {
-  return localStorage.getItem('token')
+  return sessionStorage.getItem('token')
 }
 
 export function getCurrentUser() {
   try {
-    return JSON.parse(localStorage.getItem('user') || 'null')
+    const user = JSON.parse(sessionStorage.getItem('user') || 'null')
+    return getToken() && user ? user : null
   } catch {
     return null
   }
+}
+
+export function updateCurrentUser(updates = {}) {
+  const currentUser = getCurrentUser()
+  if (!currentUser) return
+  sessionStorage.setItem('user', JSON.stringify({ ...currentUser, ...updates }))
 }
 
 export function getRole() {
@@ -27,4 +36,9 @@ export function getRole() {
 export function hasRole(allowedRoles = []) {
   const role = getRole()
   return allowedRoles.includes(role)
+}
+
+function clearLegacyAuth() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
 }
